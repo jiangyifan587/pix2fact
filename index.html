@@ -1387,6 +1387,26 @@
     z-index: 50;
   }
 
+  .lb-invite {
+    display: flex; align-items: center; gap: 10px;
+    margin: 0 0 18px 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--on-surface-var);
+  }
+  .lb-invite .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--g-green);
+    box-shadow: 0 0 0 4px rgba(52,168,83,0.16);
+    flex-shrink: 0;
+  }
+  .lb-invite a {
+    color: var(--g-blue); font-weight: 600;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+  }
+  .lb-invite a:hover { border-bottom-color: currentColor; }
+
   .leaderboard {
     background: var(--surface);
     border: 1px solid var(--outline-soft);
@@ -2348,7 +2368,7 @@
     <ul>
       <li><a href="#problem">Problem</a></li>
       <li><a href="#benchmark">Dataset</a></li>
-      <li><a href="#results">Results</a></li>
+      <li><a href="#results">Leaderboard</a></li>
       <li><a href="#analysis">Analysis</a></li>
     </ul>
     <a class="cta-btn" href="https://arxiv.org/abs/2602.00593" target="_blank" rel="noopener">
@@ -2961,7 +2981,7 @@
 <section class="results-section" id="results">
   <div class="results-wrapper">
     <div class="section-head">
-      <div class="section-tag"><span class="num">03</span><span>Results</span></div>
+      <div class="section-tag"><span class="num">03</span><span>Leaderboard</span></div>
       <h2 class="section-title">Ten frontier VLMs · the ceiling sits at <span class="gradient">51.7%.</span></h2>
       <p class="section-lede">
         Each model is evaluated under four conditions formed by two binary axes:
@@ -2985,6 +3005,11 @@
         <p><strong>Headroom remains.</strong> Best score (51.7%) still leaves a 48-point gap to human-level performance.</p>
       </div>
     </div>
+
+    <p class="lb-invite">
+      <span class="dot"></span>
+      <span>Testing a new model? We welcome submissions — <a href="https://github.com/Pix2FactEval/pix2fact_eval" target="_blank" rel="noopener">get in touch</a> and we'll evaluate it and add it to the board.</span>
+    </p>
 
     <div class="leaderboard">
       <div class="lb-header">
@@ -3474,23 +3499,23 @@
         </div>
         <svg class="cl-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
       </a>
-      <a class="cta-link" href="https://arxiv.org/abs/2602.00593" target="_blank" rel="noopener">
+      <a class="cta-link" href="https://github.com/Pix2FactEval/pix2fact_eval" target="_blank" rel="noopener">
         <div class="cl-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
         </div>
         <div class="cl-text">
           <div class="cl-title">Run the test suite</div>
-          <div class="cl-sub">Reproducible evaluation code · coming soon</div>
+          <div class="cl-sub">Reproducible evaluation code · on GitHub</div>
         </div>
         <svg class="cl-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
       </a>
-      <a class="cta-link" href="https://arxiv.org/abs/2602.00593" target="_blank" rel="noopener">
+      <a class="cta-link" href="https://github.com/Pix2FactEval/pix2fact_eval" target="_blank" rel="noopener">
         <div class="cl-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg>
         </div>
         <div class="cl-text">
           <div class="cl-title">Submit a model</div>
-          <div class="cl-sub">Join the public leaderboard · coming soon</div>
+          <div class="cl-sub">Join the public leaderboard · on GitHub</div>
         </div>
         <svg class="cl-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
       </a>
