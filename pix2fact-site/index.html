@@ -1,0 +1,3641 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pix2Fact · When Vision Is Not Enough</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Code&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&family=Roboto+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --surface:        #ffffff;
+    --surface-dim:    #faf9f6;
+    --surface-1:      #f4f3ee;
+    --surface-2:      #ecebe5;
+    --surface-tint:   #eef3fe;
+    --on-surface:     #1a1c1e;
+    --on-surface-var: #43474e;
+    --outline:        #c6c7c8;
+    --outline-soft:   #e3e3e1;
+    --g-blue:    #1a73e8;
+    --g-blue-2:  #4285f4;
+    --g-blue-soft: #d2e3fc;
+    --g-red:     #ea4335;
+    --g-red-soft: #fadbd8;
+    --g-yellow:  #fbbc04;
+    --g-yellow-soft: #feefc3;
+    --g-green:   #34a853;
+    --g-green-soft: #ceead6;
+    --aurora-1:  #4796e3;
+    --aurora-2:  #9168c0;
+    --aurora-3:  #ff6b8b;
+    --aurora-4:  #ffb454;
+    --sans:  'Plus Jakarta Sans', system-ui, sans-serif;
+    --serif: 'Newsreader', Georgia, serif;
+    --mono:  'Google Sans Code', 'Roboto Mono', monospace;
+    --r-xs: 8px; --r-sm: 12px; --r-md: 20px; --r-lg: 28px; --r-xl: 36px; --r-pill: 999px;
+    --e1: 0 1px 2px rgba(0,0,0,0.04), 0 1px 3px rgba(0,0,0,0.06);
+    --e2: 0 2px 6px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.06);
+    --e3: 0 4px 12px rgba(0,0,0,0.05), 0 8px 24px rgba(0,0,0,0.08);
+    --ease-emph: cubic-bezier(0.2, 0, 0, 1);
+    --ease-std:  cubic-bezier(0.2, 0, 0.2, 1);
+    --nav-h: 72px;  /* nav total height incl. margin */
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; scroll-padding-top: 100px; }
+  body {
+    background: var(--surface-dim);
+    color: var(--on-surface);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.55;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection { background: var(--g-blue-soft); color: var(--g-blue); }
+
+  /* === Reading progress bar — moved BELOW nav, thin === */
+  .read-progress {
+    position: fixed;
+    top: 0; left: 0;
+    height: 2.5px;
+    width: 0%;
+    background: linear-gradient(90deg, var(--aurora-1), var(--aurora-2), var(--aurora-3), var(--aurora-4));
+    z-index: 200;
+    transition: width 0.1s linear;
+    box-shadow: 0 0 8px rgba(146,104,192,0.4);
+  }
+
+  /* === NAV === */
+  nav {
+    position: fixed;
+    top: 16px; left: 16px; right: 16px;
+    z-index: 100;
+    padding: 12px 16px 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255,255,255,0.82);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border-radius: var(--r-pill);
+    border: 1px solid rgba(0,0,0,0.04);
+    box-shadow: var(--e1);
+  }
+  nav .brand {
+    font-weight: 600; font-size: 19px;
+    letter-spacing: -0.02em;
+    display: flex; align-items: center; gap: 10px;
+  }
+  nav .brand .dot {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: conic-gradient(from 180deg, var(--aurora-1), var(--aurora-2), var(--aurora-3), var(--aurora-4), var(--aurora-1));
+    box-shadow: 0 0 0 1.5px rgba(255,255,255,0.9) inset;
+  }
+  nav .brand .brand-logo {
+    width: 28px; height: 28px;
+    border-radius: 7px;
+    object-fit: contain;
+    display: block;
+  }
+  nav .brand .name b { font-weight: 700; }
+  nav .right { display: flex; gap: 6px; align-items: center; }
+  nav ul { display: flex; gap: 2px; list-style: none; }
+  nav ul a {
+    color: var(--on-surface-var);
+    text-decoration: none;
+    font-size: 14px; font-weight: 500;
+    padding: 8px 14px;
+    border-radius: var(--r-pill);
+    transition: all 0.25s var(--ease-std);
+  }
+  nav ul a:hover { background: var(--g-blue-soft); color: var(--g-blue); }
+  nav .cta-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--on-surface); color: white;
+    text-decoration: none;
+    font-size: 13px; font-weight: 600;
+    padding: 8px 16px;
+    border-radius: var(--r-pill);
+    transition: all 0.25s var(--ease-std);
+    margin-left: 8px;
+  }
+  nav .cta-btn:hover { background: var(--g-blue); transform: translateY(-1px); }
+  nav .cta-btn svg { width: 14px; height: 14px; }
+
+  /* =========================================================
+     IMAGE PLACEHOLDER — reusable component for real photos
+     ========================================================= */
+  .img-placeholder {
+    position: relative;
+    background:
+      linear-gradient(135deg, rgba(71,150,227,0.06), rgba(146,104,192,0.04));
+    border: 1.5px dashed var(--outline);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--on-surface-var);
+    transition: border-color 0.3s var(--ease-std);
+  }
+  .img-placeholder:hover { border-color: var(--g-blue); }
+  .img-placeholder .ip-content {
+    text-align: center;
+    padding: 24px;
+  }
+  .img-placeholder .ip-icon {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.7);
+    margin: 0 auto 12px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--g-blue);
+  }
+  .img-placeholder .ip-icon svg { width: 20px; height: 20px; }
+  .img-placeholder .ip-name {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--on-surface);
+    letter-spacing: 0.03em;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+  .img-placeholder .ip-hint {
+    font-size: 11px;
+    color: var(--on-surface-var);
+    line-height: 1.4;
+  }
+  /* Optionally show actual image by adding background-image */
+  .img-placeholder.with-image {
+    background-size: cover;
+    background-position: center;
+    border-style: solid;
+    border-color: transparent;
+  }
+  .img-placeholder.with-image .ip-content { display: none; }
+
+  /* === HERO === */
+  .hero {
+    min-height: 100vh;
+    padding: 130px 48px 64px;
+    position: relative;
+    overflow: hidden;
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+  }
+  .hero-blob {
+    position: absolute; inset: 0;
+    pointer-events: none; overflow: hidden;
+  }
+  .hero-blob::before {
+    content: '';
+    position: absolute;
+    top: -200px; right: -150px;
+    width: 700px; height: 700px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, rgba(146,104,192,0.22), rgba(71,150,227,0.18) 40%, transparent 70%);
+    filter: blur(20px);
+  }
+  .hero-blob::after {
+    content: '';
+    position: absolute;
+    bottom: -250px; left: -200px;
+    width: 750px; height: 750px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 60% 50%, rgba(255,180,84,0.20), rgba(255,107,139,0.15) 45%, transparent 75%);
+    filter: blur(30px);
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 2;
+    max-width: 1280px;
+    margin: 0 auto;
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 64px;
+    align-items: center;
+  }
+  @media (max-width: 1024px) { .hero-content { grid-template-columns: 1fr; gap: 40px; } }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--surface-1);
+    border: 1px solid var(--outline-soft);
+    padding: 7px 14px;
+    border-radius: var(--r-pill);
+    font-size: 13px; font-weight: 500;
+    color: var(--on-surface-var);
+    margin-bottom: 28px;
+  }
+  .chip .chip-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--g-green);
+    box-shadow: 0 0 0 3px var(--g-green-soft);
+  }
+
+  h1.hero-title {
+    font-size: clamp(44px, 6vw, 86px);
+    font-weight: 600;
+    line-height: 1.02;
+    letter-spacing: -0.035em;
+    margin-bottom: 28px;
+  }
+  h1.hero-title .gradient {
+    background: linear-gradient(115deg, var(--aurora-1) 0%, var(--aurora-2) 40%, var(--aurora-3) 70%, var(--aurora-4) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-style: italic;
+    font-family: var(--serif);
+    font-weight: 400;
+  }
+
+  .hero-sub {
+    font-size: clamp(16px, 1.3vw, 19px);
+    line-height: 1.55;
+    max-width: 600px;
+    color: var(--on-surface-var);
+    margin-bottom: 36px;
+  }
+
+  .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 14px 24px;
+    border-radius: var(--r-pill);
+    font-size: 15px; font-weight: 600;
+    text-decoration: none;
+    transition: all 0.25s var(--ease-emph);
+    border: none; cursor: pointer;
+    font-family: var(--sans);
+  }
+  .btn-primary { background: var(--on-surface); color: white; }
+  .btn-primary:hover { background: var(--g-blue); transform: translateY(-2px); box-shadow: var(--e2); }
+  .btn-secondary {
+    background: var(--surface); color: var(--on-surface);
+    border: 1px solid var(--outline-soft);
+  }
+  .btn-secondary:hover { border-color: var(--g-blue); color: var(--g-blue); transform: translateY(-2px); }
+  .btn svg { width: 16px; height: 16px; }
+
+  .hero-hook {
+    background: var(--surface);
+    border-radius: var(--r-xl);
+    padding: 36px;
+    box-shadow: var(--e3);
+    border: 1px solid var(--outline-soft);
+    position: relative;
+  }
+  .hook-label {
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--on-surface-var);
+    margin-bottom: 24px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .hook-label::before {
+    content: ''; width: 24px; height: 1.5px;
+    background: var(--on-surface-var);
+  }
+  .hook-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--outline-soft);
+  }
+  .hook-logo {
+    width: 42px; height: 42px;
+    border-radius: 10px;
+    flex-shrink: 0;
+    background: #fff;
+    border: 1px solid var(--outline-soft);
+    display: inline-flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .hook-logo img { width: 100%; height: 100%; object-fit: contain; padding: 6px; display: block; }
+  .hook-logo-group { display: flex; gap: 5px; flex-shrink: 0; }
+  .hook-logo.sm { width: 30px; height: 30px; border-radius: 8px; }
+  .hook-logo.sm img { padding: 4px; }
+  .hook-row:last-of-type { border-bottom: none; padding-bottom: 0; }
+  .hook-row .who {
+    font-size: 16px; font-weight: 500;
+    flex: 1;
+    min-width: 0;
+  }
+  .hook-row .who .sub {
+    display: block;
+    font-size: 12px;
+    color: var(--on-surface-var);
+    font-weight: 400;
+    margin-top: 2px;
+  }
+  .hook-row .score {
+    font-size: clamp(32px, 3.5vw, 42px);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .hook-row .score .pct {
+    font-size: 0.55em;
+    color: var(--on-surface-var);
+    font-weight: 600;
+  }
+  .hook-row.human .score { color: var(--g-green); }
+  .hook-row.best .score { color: var(--g-blue); }
+  .hook-row.avg .score { color: var(--g-red); }
+  .hook-arrow {
+    display: flex;
+    justify-content: center;
+    margin: 8px 0;
+    color: var(--outline);
+  }
+  .hook-arrow svg { width: 18px; height: 18px; }
+
+  /* =========================================================
+     QUICK SCAN — FIX: add top padding so it clears the nav
+     ========================================================= */
+  .quickscan {
+    background: var(--surface);
+    border-top: 1px solid var(--outline-soft);
+    border-bottom: 1px solid var(--outline-soft);
+    padding: 56px 48px;
+  }
+  .quickscan-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 48px;
+    align-items: center;
+  }
+  .quickscan-label {
+    display: inline-flex; align-items: center; gap: 12px;
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--on-surface);
+    white-space: nowrap;
+    padding: 10px 18px;
+    background: linear-gradient(135deg, rgba(71,150,227,0.08), rgba(146,104,192,0.08));
+    border-radius: var(--r-md);
+    border: 1px solid rgba(71,150,227,0.18);
+  }
+  .quickscan-label::before {
+    content: ''; width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--g-yellow);
+    box-shadow: 0 0 0 4px var(--g-yellow-soft);
+  }
+  .quickscan-bullets {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 36px;
+  }
+  .qs-bullet {
+    font-size: 18px;
+    line-height: 1.55;
+    color: var(--on-surface-var);
+    padding-left: 26px;
+    position: relative;
+    font-weight: 400;
+  }
+  .qs-bullet::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 13px;
+    width: 11px; height: 11px;
+    border-radius: 50%;
+  }
+  .qs-bullet:nth-child(1)::before { background: var(--g-blue); }
+  .qs-bullet:nth-child(2)::before { background: var(--g-red); }
+  .qs-bullet:nth-child(3)::before { background: var(--g-yellow); }
+  .qs-bullet strong {
+    color: var(--on-surface);
+    font-weight: 700;
+    font-size: 21px;
+    line-height: 1.3;
+    display: block;
+    margin-bottom: 6px;
+    letter-spacing: -0.02em;
+  }
+
+  /* === SECTION BASE === */
+  section.content {
+    padding: 120px 48px;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+  .section-head {
+    display: flex; flex-direction: column;
+    gap: 16px;
+    margin-bottom: 56px;
+    max-width: 880px;
+  }
+  .section-tag {
+    display: inline-flex; align-items: center; gap: 8px;
+    align-self: flex-start;
+    background: var(--surface-1);
+    color: var(--on-surface-var);
+    padding: 6px 14px;
+    border-radius: var(--r-pill);
+    font-size: 12px; font-weight: 600;
+    letter-spacing: 0.02em; text-transform: uppercase;
+  }
+  .section-tag .num { color: var(--g-blue); font-family: var(--mono); }
+  h2.section-title {
+    font-size: clamp(34px, 4.2vw, 52px);
+    font-weight: 600;
+    line-height: 1.08;
+    letter-spacing: -0.03em;
+  }
+  h2.section-title .gradient {
+    background: linear-gradient(115deg, var(--aurora-1), var(--aurora-2), var(--aurora-3));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-family: var(--serif);
+    font-style: italic;
+    font-weight: 500;
+  }
+  .section-lede {
+    font-size: 17px;
+    color: var(--on-surface-var);
+    line-height: 1.6;
+    max-width: 720px;
+  }
+
+  /* === PROBLEM with story === */
+  .story-card {
+    background: linear-gradient(135deg, #fef9e7 0%, #fef5d1 100%);
+    border-radius: var(--r-xl);
+    padding: 48px;
+    margin-bottom: 56px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #fbe7a0;
+  }
+  .story-card::before {
+    content: '"';
+    position: absolute;
+    top: -20px; left: 32px;
+    font-family: var(--serif);
+    font-size: 200px;
+    color: rgba(192,136,0,0.15);
+    line-height: 1;
+    font-weight: 500;
+  }
+  .story-text {
+    position: relative;
+    z-index: 1;
+    font-family: var(--serif);
+    font-size: clamp(19px, 1.7vw, 26px);
+    line-height: 1.5;
+    font-weight: 400;
+    max-width: 920px;
+    color: #5e4400;
+  }
+  .story-text em { color: #8a6500; font-style: italic; }
+  .story-attribution {
+    margin-top: 24px;
+    font-size: 13.5px; font-weight: 600;
+    color: #8a6500;
+    letter-spacing: 0.01em;
+  }
+
+  .problem-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 56px;
+  }
+  .problem-card {
+    background: var(--surface);
+    border: 1px solid var(--outline-soft);
+    border-radius: var(--r-lg);
+    padding: 32px;
+    transition: all 0.4s var(--ease-emph);
+    position: relative;
+    overflow: hidden;
+  }
+  .problem-card:hover { transform: translateY(-4px); box-shadow: var(--e2); }
+  .problem-card .pc-icon {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 20px;
+    transition: transform 0.4s var(--ease-emph);
+  }
+  .problem-card:hover .pc-icon { transform: scale(1.08) rotate(-3deg); }
+  .problem-card .pc-icon svg { width: 24px; height: 24px; }
+  .problem-card.blue .pc-icon { background: var(--g-blue-soft); color: var(--g-blue); }
+  .problem-card.red .pc-icon { background: var(--g-red-soft); color: var(--g-red); }
+  .problem-card.yellow .pc-icon { background: var(--g-yellow-soft); color: #c08800; }
+  .problem-card h3 {
+    font-size: 20px; font-weight: 600;
+    margin-bottom: 10px;
+    letter-spacing: -0.015em;
+  }
+  .problem-card p {
+    font-size: 14.5px;
+    color: var(--on-surface-var);
+    line-height: 1.6;
+  }
+  .problem-card .step-num {
+    position: absolute;
+    top: 32px; right: 32px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--outline);
+  }
+
+  /* === WALKTHROUGH — REBALANCED so right side doesn't have empty space === */
+  .walkthrough {
+    background: var(--surface);
+    border-radius: var(--r-xl);
+    box-shadow: var(--e2);
+    border: 1px solid var(--outline-soft);
+    overflow: hidden;
+  }
+  .walkthrough-top {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 0;
+  }
+  @media (max-width: 900px) { .walkthrough-top { grid-template-columns: 1fr; } }
+  .wt-image {
+    position: relative;
+    min-height: 420px;
+  }
+  .wt-image .img-placeholder {
+    border-radius: 0;
+    border-top: none;
+    border-left: none;
+    border-bottom: none;
+    height: 100%;
+    width: 100%;
+  }
+  @media (max-width: 900px) {
+    .wt-image .img-placeholder { border-right: none; border-bottom: 1.5px dashed var(--outline); min-height: 280px; }
+  }
+  .wt-text {
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .wt-text .ex-label {
+    display: inline-flex; align-items: center; gap: 8px;
+    align-self: flex-start;
+    font-size: 12px; font-weight: 600;
+    color: var(--g-blue);
+    background: var(--g-blue-soft);
+    padding: 6px 12px;
+    border-radius: var(--r-pill);
+    margin-bottom: 16px;
+  }
+  .wt-text .question {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 400;
+    font-style: italic;
+    line-height: 1.45;
+    margin-bottom: 28px;
+    letter-spacing: -0.005em;
+    color: var(--on-surface);
+  }
+  .wt-question-label,
+  .wt-answer-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--on-surface-var);
+    margin-bottom: 10px;
+  }
+  .wt-answer-block {
+    margin-bottom: 28px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--outline-soft);
+  }
+  .answer-pill {
+    display: inline-flex; align-items: center; gap: 10px;
+    align-self: flex-start;
+    padding: 10px 16px;
+    background: var(--g-green-soft);
+    border-radius: var(--r-pill);
+    margin-bottom: 24px;
+  }
+  .answer-pill .check {
+    width: 20px; height: 20px;
+    background: var(--g-green);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: white;
+  }
+  .answer-pill .answer-value {
+    font-family: var(--mono);
+    font-size: 14px; font-weight: 600;
+    color: #1e6b35;
+  }
+  .wt-helper {
+    font-size: 14px;
+    color: var(--on-surface-var);
+    line-height: 1.6;
+    padding-top: 20px;
+    border-top: 1px solid var(--outline-soft);
+  }
+  .wt-helper strong { color: var(--on-surface); font-weight: 600; }
+
+  /* Stepper */
+  .wt-steps {
+    border-top: 1px solid var(--outline-soft);
+    padding: 32px 40px 40px;
+    background: var(--surface-dim);
+  }
+  .wt-steps-label {
+    font-size: 12px; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--on-surface-var);
+    margin-bottom: 24px;
+  }
+  .wt-stepper {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    position: relative;
+  }
+  @media (max-width: 800px) {
+    .wt-stepper { grid-template-columns: 1fr; gap: 12px; }
+  }
+  .wt-step {
+    background: var(--surface);
+    border-radius: var(--r-md);
+    padding: 20px 16px;
+    border: 1px solid var(--outline-soft);
+    position: relative;
+    z-index: 1;
+  }
+  .wt-step .ws-num {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--surface-1);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono);
+    font-size: 12px; font-weight: 700;
+    margin-bottom: 12px;
+    color: var(--on-surface-var);
+  }
+  .wt-step:nth-child(1) .ws-num { background: var(--g-blue-soft); color: var(--g-blue); }
+  .wt-step:nth-child(2) .ws-num { background: var(--g-blue-soft); color: var(--g-blue); }
+  .wt-step:nth-child(3) .ws-num { background: var(--g-yellow-soft); color: #c08800; }
+  .wt-step:nth-child(4) .ws-num { background: var(--g-red-soft); color: var(--g-red); }
+  .wt-step:nth-child(5) .ws-num { background: var(--g-green-soft); color: var(--g-green); }
+  .wt-step h5 {
+    font-size: 13px; font-weight: 600;
+    margin-bottom: 6px;
+    line-height: 1.3;
+  }
+  .wt-step p {
+    font-size: 12px;
+    color: var(--on-surface-var);
+    line-height: 1.5;
+  }
+  .wt-step .ws-skill {
+    margin-top: 10px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--on-surface-var);
+    padding-top: 8px;
+    border-top: 1px dashed var(--outline-soft);
+  }
+  .wt-stepper::before {
+    content: '';
+    position: absolute;
+    top: 35px;
+    left: 14%; right: 14%;
+    height: 1.5px;
+    background: var(--outline-soft);
+    z-index: 0;
+  }
+  @media (max-width: 800px) { .wt-stepper::before { display: none; } }
+
+  /* === SCENARIOS === FIX: split count-num and progress-fill color rules */
+  .scenarios-section {
+    background: var(--surface-1);
+    padding: 120px 48px;
+  }
+  .scenarios-wrapper { max-width: 1280px; margin: 0 auto; }
+  .scenarios-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+  .scenario-card {
+    background: var(--surface);
+    border-radius: var(--r-md);
+    transition: all 0.4s var(--ease-emph);
+    border: 1px solid transparent;
+    overflow: hidden;
+    cursor: default;
+    display: flex;
+    flex-direction: column;
+  }
+  .scenario-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--e2);
+    border-color: var(--outline-soft);
+  }
+  .scenario-thumb {
+    position: relative;
+    overflow: hidden;
+    background: #f4f3ee;
+    border-bottom: 1px solid var(--outline-soft);
+    padding: 10px;
+    aspect-ratio: 4 / 3;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .scenario-thumb img {
+    display: block;
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .scenario-thumb .img-placeholder {
+    border-radius: 0;
+    border: none;
+    border-bottom: 1.5px dashed var(--outline);
+    height: 100%;
+    width: 100%;
+  }
+  .scenario-body { padding: 16px 18px 18px; }
+  .scenario-card .sc-tag {
+    display: inline-flex;
+    font-family: var(--mono);
+    font-size: 10px; font-weight: 600;
+    color: var(--on-surface-var);
+    background: var(--surface-1);
+    padding: 3px 8px;
+    border-radius: var(--r-pill);
+    margin-bottom: 8px;
+    letter-spacing: 0.02em;
+  }
+  .scenario-card h4 {
+    font-size: 15px; font-weight: 600;
+    line-height: 1.3;
+    margin-bottom: 14px;
+    letter-spacing: -0.015em;
+    min-height: 38px;
+  }
+  .scenario-card .count-row {
+    display: flex; align-items: baseline; gap: 6px;
+  }
+  .scenario-card .count-num {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+  .scenario-card .count-pct {
+    font-size: 11px;
+    color: var(--on-surface-var);
+  }
+  .scenario-card .progress {
+    height: 3px;
+    background: var(--surface-1);
+    border-radius: var(--r-pill);
+    margin-top: 8px;
+    overflow: hidden;
+  }
+  .scenario-card .progress-fill {
+    height: 100%;
+    border-radius: var(--r-pill);
+  }
+  /* FIX: only color the NUM, only background the FILL */
+  .scenario-card.tone-blue .count-num   { color: var(--g-blue); }
+  .scenario-card.tone-blue .progress-fill { background-color: var(--g-blue); }
+  .scenario-card.tone-red .count-num    { color: var(--g-red); }
+  .scenario-card.tone-red .progress-fill  { background-color: var(--g-red); }
+  .scenario-card.tone-yellow .count-num { color: #c08800; }
+  .scenario-card.tone-yellow .progress-fill { background-color: var(--g-yellow); }
+  .scenario-card.tone-green .count-num  { color: var(--g-green); }
+  .scenario-card.tone-green .progress-fill { background-color: var(--g-green); }
+
+  /* =========================================================
+     SAMPLE QUESTIONS GALLERY — actual paper examples
+     ========================================================= */
+  .samples-section {
+    margin-top: 72px;
+    padding-top: 64px;
+    border-top: 1px solid var(--outline-soft);
+  }
+  .samples-head {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+  .samples-head h3 {
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    line-height: 1.15;
+  }
+  .samples-head h3 .gradient {
+    background: linear-gradient(115deg, var(--aurora-1), var(--aurora-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-family: var(--serif);
+    font-style: italic;
+    font-weight: 500;
+  }
+  .samples-head p {
+    font-size: 15px;
+    color: var(--on-surface-var);
+    line-height: 1.6;
+    max-width: 720px;
+  }
+
+  /* Tab strip */
+  .samples-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 24px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+  }
+  .samples-tabs::-webkit-scrollbar { height: 6px; }
+  .samples-tabs::-webkit-scrollbar-thumb { background: var(--outline-soft); border-radius: 3px; }
+  .sample-tab {
+    flex-shrink: 0;
+    background: var(--surface);
+    border: 1px solid var(--outline-soft);
+    color: var(--on-surface-var);
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 10px 16px;
+    border-radius: var(--r-pill);
+    cursor: pointer;
+    transition: all 0.25s var(--ease-std);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+  }
+  .sample-tab .st-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--surface-1);
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--on-surface-var);
+  }
+  .sample-tab:hover { border-color: var(--g-blue); color: var(--g-blue); }
+  .sample-tab:hover .st-num { background: var(--g-blue-soft); color: var(--g-blue); }
+  .sample-tab.active {
+    background: var(--on-surface);
+    color: white;
+    border-color: var(--on-surface);
+    box-shadow: 0 2px 8px rgba(26,28,30,0.15);
+  }
+  .sample-tab.active .st-num { background: var(--g-blue); color: white; }
+
+  /* Sample card */
+  .sample-cards-wrap { position: relative; }
+  .sample-card {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--outline-soft);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    box-shadow: var(--e1);
+  }
+  .sample-card.active { display: grid; }
+  .sample-card {
+    grid-template-columns: 1fr 1.05fr;
+  }
+  @media (max-width: 900px) { .sample-card { grid-template-columns: 1fr; } }
+  .sample-card .sc-image {
+    position: relative;
+    background: #f4f3ee;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    min-height: 420px;
+  }
+  .sample-card .sc-image img {
+    display: block;
+    max-width: 100%;
+    max-height: 520px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .sample-card .sc-image .img-placeholder {
+    border-radius: 0;
+    border-top: none;
+    border-left: none;
+    border-bottom: none;
+    height: 100%;
+    width: 100%;
+  }
+  @media (max-width: 900px) {
+    .sample-card .sc-image { min-height: auto; padding: 14px; }
+    .sample-card .sc-image img { max-height: 380px; }
+    .sample-card .sc-image .img-placeholder { border-right: none; border-bottom: 1.5px dashed var(--outline); min-height: 260px; }
+  }
+  .sample-card .sc-text {
+    padding: 36px 36px 32px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .sample-card .sc-cat {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    align-self: flex-start;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: var(--r-pill);
+    margin-bottom: 12px;
+  }
+  .sample-card.tone-blue   .sc-cat { background: var(--g-blue-soft); color: var(--g-blue); }
+  .sample-card.tone-red    .sc-cat { background: var(--g-red-soft); color: var(--g-red); }
+  .sample-card.tone-yellow .sc-cat { background: var(--g-yellow-soft); color: #9c6e00; }
+  .sample-card.tone-green  .sc-cat { background: var(--g-green-soft); color: #1e6b35; }
+  .sample-card .sc-fig {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--on-surface-var);
+    margin-bottom: 16px;
+  }
+  .sample-card .sc-question {
+    font-family: var(--serif);
+    font-size: 19px;
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: -0.005em;
+    color: var(--on-surface);
+    margin-bottom: 24px;
+    font-style: italic;
+  }
+  .sample-card .sc-question::before {
+    content: '"';
+    color: var(--g-blue);
+    font-size: 28px;
+    font-weight: 500;
+    font-style: normal;
+    line-height: 0;
+    vertical-align: -8px;
+    margin-right: 4px;
+  }
+  .sample-card .sc-answer-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: var(--g-green-soft);
+    border-radius: var(--r-md);
+  }
+  .sample-card .sc-answer-row .sc-ans-icon {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: var(--g-green);
+    display: flex; align-items: center; justify-content: center;
+    color: white;
+    flex-shrink: 0;
+  }
+  .sample-card .sc-ans-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #1e6b35;
+  }
+  .sample-card .sc-ans-value {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 600;
+    color: #1e6b35;
+    margin-left: auto;
+    text-align: right;
+  }
+
+  /* Pagination dots indicator */
+  .sample-nav {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    margin-top: 24px;
+  }
+  .sample-nav-btn {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--outline-soft);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: all 0.25s var(--ease-std);
+    color: var(--on-surface-var);
+  }
+  .sample-nav-btn:hover { border-color: var(--g-blue); color: var(--g-blue); }
+  .sample-nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .sample-nav-btn svg { width: 16px; height: 16px; }
+  .sample-dots {
+    display: flex;
+    gap: 6px;
+  }
+  .sample-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--outline);
+    border: none;
+    cursor: pointer;
+    transition: all 0.25s var(--ease-std);
+    padding: 0;
+  }
+  .sample-dot:hover { background: var(--on-surface-var); }
+  .sample-dot.active {
+    background: var(--g-blue);
+    width: 24px;
+    border-radius: 4px;
+  }
+  .sample-counter {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--on-surface-var);
+    min-width: 50px;
+    text-align: center;
+  }
+  .sample-counter .current { color: var(--on-surface); font-weight: 700; }
+
+  /* Case study 内的图片占位 — 不再像 broken */
+  .case-image .img-placeholder {
+    border-style: solid;
+    border-color: var(--outline-soft);
+    background: linear-gradient(135deg, var(--surface-1), var(--surface-2));
+  }
+  .case-image .img-placeholder .ip-icon {
+    background: rgba(255,255,255,0.85);
+    color: var(--on-surface-var);
+  }
+  .case-image .img-placeholder .ip-name { color: var(--on-surface); font-weight: 600; }
+  .case-image .img-placeholder .ip-hint { color: var(--on-surface-var); }
+
+  /* === METHOD === */
+  .method-flow {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+  .method-step {
+    background: var(--surface);
+    border: 1px solid var(--outline-soft);
+    border-radius: var(--r-lg);
+    padding: 28px 24px;
+    transition: all 0.4s var(--ease-emph);
+  }
+  .method-step:hover { transform: translateY(-4px); box-shadow: var(--e2); }
+  .method-step .ms-num {
+    font-family: var(--mono);
+    font-size: 12px; font-weight: 600;
+    color: var(--g-blue);
+    margin-bottom: 16px;
+  }
+  .method-step .ms-icon {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 18px;
+  }
+  .method-step .ms-icon svg { width: 22px; height: 22px; }
+  .method-step:nth-child(1) .ms-icon { background: var(--g-blue-soft); color: var(--g-blue); }
+  .method-step:nth-child(2) .ms-icon { background: var(--g-red-soft); color: var(--g-red); }
+  .method-step:nth-child(3) .ms-icon { background: var(--g-yellow-soft); color: #c08800; }
+  .method-step:nth-child(4) .ms-icon { background: var(--g-green-soft); color: var(--g-green); }
+  .method-step h4 {
+    font-size: 17px; font-weight: 600;
+    margin-bottom: 8px;
+    letter-spacing: -0.015em;
+  }
+  .method-step p {
+    font-size: 13.5px;
+    color: var(--on-surface-var);
+    line-height: 1.55;
+  }
+
+  /* === PIPELINE SECTION (How (Q,A) is built) === */
+  .pipeline-section {
+    margin-top: 80px;
+    padding-top: 64px;
+    border-top: 1px solid var(--outline-soft);
+  }
+  .pipeline-head {
+    margin-bottom: 40px;
+    max-width: 880px;
+  }
+  .pipeline-tag {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: linear-gradient(135deg, rgba(52,168,83,0.1), rgba(71,150,227,0.08));
+    color: #1e6b35;
+    padding: 6px 14px;
+    border-radius: var(--r-pill);
+    font-size: 12px; font-weight: 600;
+    letter-spacing: 0.02em; text-transform: uppercase;
+    margin-bottom: 16px;
+    border: 1px solid rgba(52,168,83,0.2);
+  }
+  .pipeline-head h3 {
+    font-size: clamp(26px, 3vw, 36px);
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    line-height: 1.15;
+    margin-bottom: 14px;
+  }
+  .pipeline-head h3 .pipeline-grad {
+    background: linear-gradient(115deg, var(--g-green), var(--aurora-1));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-family: var(--serif);
+    font-style: italic;
+    font-weight: 500;
+  }
+  .pipeline-lede {
+    font-size: 15.5px;
+    color: var(--on-surface-var);
+    line-height: 1.65;
+    max-width: 760px;
+  }
+  .pipeline-lede strong { color: var(--on-surface); font-weight: 700; }
+
+  /* Paper figure */
+  .pipeline-figure {
+    background: var(--surface);
+    border: 1px solid var(--outline-soft);
+    border-radius: var(--r-lg);
+    padding: 24px;
+    margin-bottom: 32px;
+    box-shadow: var(--e1);
+    overflow: hidden;
+  }
+  .pipeline-figure-img {
+    display: block;
+    width: 100%;
+    height: auto;
+    background-color: #fafafa;
+    border-radius: var(--r-sm);
+    border: 1px solid var(--outline-soft);
+  }
+  .pipeline-figure figcaption {
+    font-size: 13px;
+    color: var(--on-surface-var);
+    line-height: 1.55;
+    margin-top: 14px;
+    padding: 0 6px;
+  }
+  .pipeline-figure figcaption strong {
+    color: var(--on-surface);
+    font-weight: 600;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.02em;
+  }
+
+  /* Method step stats */
+  .method-step .ms-stat {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--outline-soft);
+  }
+  .method-step .ms-stat-num {
+    display: block;
+    font-family: var(--mono);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .method-step:nth-child(1) .ms-stat-num { color: var(--g-blue); }
+  .method-step:nth-child(2) .ms-stat-num { color: var(--g-red); }
+  .method-step:nth-child(3) .ms-stat-num { color: #c08800; }
+  .method-step:nth-child(4) .ms-stat-num { color: var(--g-green); }
+  .ms-stat-unit {
+    font-size: 11px;
+    color: var(--on-surface-var);
+    font-weight: 500;
+    margin-left: 2px;
+  }
+  .ms-stat-label {
+    font-family: var(--sans);
+    font-size: 11px;
+    color: var(--on-surface-var);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  /* Quality stats strip */
+  .qc-strip {
+    margin-top: 32px;
+    background: linear-gradient(135deg, #0f1115 0%, #1a1c1e 100%);
+    border-radius: var(--r-lg);
+    padding: 32px 40px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto 1fr auto 1fr;
+    gap: 24px;
+    align-items: center;
+    color: white;
+  }
+  .qc-item { text-align: center; }
+  .qc-num {
+    font-size: 38px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    background: linear-gradient(115deg, #6cb3ff, #b599ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 6px;
+    line-height: 1;
+  }
+  .qc-label {
+    font-size: 12px;
+    color: rgba(255,255,255,0.65);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 500;
+  }
+  .qc-divider {
+    width: 1px;
+    height: 36px;
+    background: rgba(255,255,255,0.12);
+  }
+  @media (max-width: 900px) {
+    .qc-strip {
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    .qc-divider { display: none; }
+    .qc-num { font-size: 30px; }
+  }
+
+  /* === RESULTS === */
+  .results-section {
+    background: var(--surface);
+    padding: 120px 48px;
+  }
+  .results-wrapper { max-width: 1280px; margin: 0 auto; }
+
+  .takeaways {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 40px;
+  }
+  .takeaway {
+    background: var(--surface-1);
+    border-radius: var(--r-md);
+    padding: 24px;
+  }
+  .takeaway .ta-stat {
+    font-size: 36px; font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    margin-bottom: 12px;
+  }
+  .takeaway:nth-child(1) .ta-stat { color: var(--g-blue); }
+  .takeaway:nth-child(2) .ta-stat { color: var(--g-red); }
+  .takeaway:nth-child(3) .ta-stat { color: #c08800; }
+  .takeaway p {
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--on-surface);
+  }
+  .takeaway p strong { font-weight: 700; }
+
+  .term {
+    border-bottom: 1.5px dotted var(--on-surface-var);
+    cursor: help;
+    position: relative;
+  }
+  .term:hover { color: var(--g-blue); border-bottom-color: var(--g-blue); }
+  .term:hover::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--on-surface);
+    color: white;
+    padding: 8px 12px;
+    border-radius: var(--r-sm);
+    font-size: 12px; font-weight: 400;
+    line-height: 1.4;
+    white-space: normal;
+    width: max-content;
+    max-width: 260px;
+    z-index: 50;
+    box-shadow: var(--e2);
+    pointer-events: none;
+  }
+  .term:hover::before {
+    content: '';
+    position: absolute;
+    bottom: calc(100% + 2px);
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: var(--on-surface);
+    z-index: 50;
+  }
+
+  .leaderboard {
+    background: var(--surface);
+    border: 1px solid var(--outline-soft);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    box-shadow: var(--e1);
+  }
+  .lb-header,
+  .lb-row {
+    display: grid;
+    grid-template-columns: 50px 2.2fr repeat(4, 1fr) 1.1fr;
+    gap: 16px;
+    padding: 16px 28px;
+    align-items: center;
+  }
+  .lb-header {
+    background: var(--surface-1);
+    font-family: var(--mono);
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.02em; text-transform: uppercase;
+    color: var(--on-surface-var);
+    border-bottom: 1px solid var(--outline-soft);
+  }
+  .lb-header span.col-sub {
+    display: block;
+    font-size: 10px;
+    font-weight: 400;
+    opacity: 0.7;
+    text-transform: none;
+    letter-spacing: 0;
+    margin-top: 2px;
+  }
+  .lb-row {
+    border-bottom: 1px solid var(--outline-soft);
+    transition: background 0.25s var(--ease-std);
+  }
+  .lb-row:last-child { border-bottom: none; }
+  .lb-row:hover { background: var(--surface-tint); }
+  .lb-row.leader { background: linear-gradient(90deg, rgba(26,115,232,0.06), transparent 60%); }
+  .lb-rank {
+    font-family: var(--mono);
+    font-size: 14px; font-weight: 500;
+    color: var(--on-surface-var);
+  }
+  .lb-rank-pill {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--g-yellow-soft);
+    color: #c08800;
+    font-weight: 700; font-size: 13px;
+  }
+  .lb-model {
+    font-size: 16px; font-weight: 600;
+    letter-spacing: -0.01em;
+    display: flex; align-items: center; gap: 10px;
+  }
+  /* Vendor logo badges */
+  .lb-logo {
+    width: 26px; height: 26px;
+    flex-shrink: 0;
+    border-radius: 7px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    border: 1px solid var(--outline-soft);
+    overflow: hidden;
+  }
+  .lb-logo svg { width: 15px; height: 15px; display: block; }
+  .lb-logo img.lb-logo-img { width: 100%; height: 100%; object-fit: contain; padding: 3px; display: block; }
+  .lb-logo-mono {
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: 13px;
+    color: #fff;
+    line-height: 1;
+  }
+  .lb-logo-sm { width: 22px; height: 22px; border-radius: 6px; }
+  .lb-logo-sm svg { width: 13px; height: 13px; }
+  .lb-logo-sm .lb-logo-mono { font-size: 11px; }
+  .lb-logo-sm img.lb-logo-img { padding: 2px; }
+  .lb-tag {
+    display: inline-flex;
+    font-family: var(--mono);
+    font-size: 9px; font-weight: 600;
+    letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: var(--r-pill);
+    flex-shrink: 0;
+    background: transparent;
+    border: 1px solid var(--outline-soft);
+    color: var(--on-surface-var);
+  }
+  .lb-tag.closed { color: var(--g-blue); border-color: rgba(26,115,232,0.25); }
+  .lb-tag.open { color: #c08800; border-color: rgba(192,136,0,0.3); }
+  .lb-cell {
+    font-family: var(--mono);
+    font-size: 14px; font-weight: 500;
+    color: var(--on-surface);
+  }
+  .lb-cell.na {
+    color: var(--outline);
+    font-style: italic;
+  }
+  /* C1-C4 column color coding — stronger, clearer separation */
+  .lb-cell.c1 {
+    background: rgba(67,71,78,0.12);
+    color: #2f3338;
+    border: 1px solid rgba(67,71,78,0.16);
+    padding: 5px 10px;
+    border-radius: var(--r-sm);
+    display: inline-block;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .lb-cell.c2 {
+    background: rgba(26,115,232,0.16);
+    color: #1156b8;
+    border: 1px solid rgba(26,115,232,0.28);
+    padding: 5px 10px;
+    border-radius: var(--r-sm);
+    display: inline-block;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .lb-cell.c3 {
+    background: rgba(251,188,4,0.26);
+    color: #8a5d00;
+    border: 1px solid rgba(192,136,0,0.32);
+    padding: 5px 10px;
+    border-radius: var(--r-sm);
+    display: inline-block;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .lb-cell.c4 {
+    background: rgba(52,168,83,0.22);
+    color: #166534;
+    border: 1px solid rgba(52,168,83,0.36);
+    padding: 5px 10px;
+    border-radius: var(--r-sm);
+    display: inline-block;
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .lb-cell.c4 strong { color: #166534; font-weight: 800; }
+  .lb-cell.na {
+    background: transparent !important;
+    padding: 0 !important;
+  }
+  /* Header column color hints */
+  .lb-header .col-c1 .term { color: #43474e; font-weight: 700; }
+  .lb-header .col-c2 .term { color: var(--g-blue); font-weight: 700; }
+  .lb-header .col-c3 .term { color: #9c6e00; font-weight: 700; }
+  .lb-header .col-c4 .term { color: #1e6b35; font-weight: 700; }
+  .lb-avg {
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    text-align: right;
+    color: var(--g-blue);
+  }
+
+  .leaderboard-mobile { display: none; }
+  .lb-card {
+    background: var(--surface);
+    border: 1px solid var(--outline-soft);
+    border-radius: var(--r-md);
+    padding: 16px 18px;
+    margin-bottom: 10px;
+  }
+  .lb-card.leader { border-color: var(--g-blue); background: linear-gradient(135deg, rgba(26,115,232,0.06), transparent); }
+  .lb-card-top {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .lb-card-top .lc-left {
+    display: flex; align-items: center; gap: 10px;
+    min-width: 0;
+    flex: 1;
+  }
+  .lb-card-top .lc-rank {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--surface-1);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono);
+    font-size: 11px; font-weight: 700;
+    color: var(--on-surface-var);
+    flex-shrink: 0;
+  }
+  .lb-card.leader .lc-rank { background: var(--g-yellow-soft); color: #c08800; }
+  .lb-card-top .lc-name {
+    font-size: 14px; font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .lb-card-top .lc-avg {
+    font-family: var(--mono);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--g-blue);
+    letter-spacing: -0.01em;
+    flex-shrink: 0;
+  }
+  .lb-card-tag-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+  .lb-card-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--outline-soft);
+  }
+  .lb-card-cell {
+    text-align: center;
+    padding: 6px 4px;
+    border-radius: var(--r-sm);
+  }
+  .lb-card-cell .lcc-label {
+    font-family: var(--mono);
+    font-size: 9px; font-weight: 600;
+    color: var(--on-surface-var);
+    margin-bottom: 2px;
+    letter-spacing: 0.04em;
+  }
+  .lb-card-cell .lcc-val {
+    font-family: var(--mono);
+    font-size: 13px; font-weight: 600;
+  }
+  .lb-card-cell.c1m { background: rgba(67,71,78,0.12); border: 1px solid rgba(67,71,78,0.16); }
+  .lb-card-cell.c1m .lcc-val { color: #2f3338; }
+  .lb-card-cell.c2m { background: rgba(26,115,232,0.16); border: 1px solid rgba(26,115,232,0.28); }
+  .lb-card-cell.c2m .lcc-val { color: #1156b8; }
+  .lb-card-cell.c3m { background: rgba(251,188,4,0.26); border: 1px solid rgba(192,136,0,0.32); }
+  .lb-card-cell.c3m .lcc-val { color: #8a5d00; }
+  .lb-card-cell.c4m { background: rgba(52,168,83,0.22); border: 1px solid rgba(52,168,83,0.36); }
+  .lb-card-cell.c4m .lcc-val { color: #166534; font-weight: 700; }
+  .lb-card-cell.best .lcc-val { color: var(--g-blue); }
+
+  .gain-card {
+    background: linear-gradient(135deg, #fbfaf7 0%, #f5f3fb 100%);
+    border: 1px solid var(--outline-soft);
+    border-radius: var(--r-lg);
+    padding: 40px;
+    margin-top: 32px;
+    position: relative;
+    overflow: hidden;
+  }
+  .gain-card::before {
+    content: '';
+    position: absolute;
+    top: -100px; right: -100px;
+    width: 300px; height: 300px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(106,85,224,0.08), transparent 70%);
+    pointer-events: none;
+  }
+  .gain-card h3 {
+    font-size: 22px; font-weight: 600;
+    margin-bottom: 6px;
+    letter-spacing: -0.02em;
+    position: relative;
+  }
+  .gain-card h3 .gain-emphasis {
+    background: linear-gradient(115deg, #25a6c4, #6a55e0);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-weight: 700;
+  }
+  .gain-card .gc-sub {
+    font-size: 14px;
+    color: var(--on-surface-var);
+    margin-bottom: 32px;
+    position: relative;
+  }
+  .gain-row {
+    display: grid;
+    grid-template-columns: 220px 1fr 90px;
+    gap: 20px;
+    align-items: center;
+    margin-bottom: 14px;
+    position: relative;
+  }
+  .gain-row .gain-label {
+    font-size: 14px; font-weight: 500;
+    color: var(--on-surface);
+  }
+  .gain-row .gain-label .ll {
+    color: var(--on-surface-var);
+    font-size: 12px;
+    display: block;
+    margin-top: 2px;
+    font-weight: 400;
+  }
+  .gain-bar-track {
+    height: 32px;
+    background: rgba(255,255,255,0.7);
+    border-radius: var(--r-pill);
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(0,0,0,0.04);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
+  }
+  .gain-bar-fill {
+    height: 100%;
+    border-radius: var(--r-pill);
+    display: flex; align-items: center;
+    padding-left: 14px;
+    font-family: var(--mono);
+    font-size: 12px; font-weight: 700;
+    color: white;
+    transition: width 0.6s var(--ease-emph);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  /* Modern palette — warm hues = vision/cropping gains, cool hues = search gains; deeper = larger lift */
+  .gain-bar-fill.b3 { background: linear-gradient(90deg, #ffcf8f, #f59e3c); }   /* +3.2  cropping alone — soft amber */
+  .gain-bar-fill.b1 { background: linear-gradient(90deg, #67d0dd, #25a6c4); }   /* +10.6 search alone — teal */
+  .gain-bar-fill.b4 { background: linear-gradient(90deg, #ff9d77, #f0604f); }   /* +10.8 cropping when searching — coral */
+  .gain-bar-fill.b2 { background: linear-gradient(90deg, #9486f2, #6a55e0); }   /* +18.3 search when cropped — indigo */
+  .gain-bar-fill.b5 {
+    background: linear-gradient(90deg, #25a6c4 0%, #6a55e0 55%, #ff6b8b 100%);
+    color: white;
+  }
+  .gain-row .gain-num {
+    font-family: var(--mono);
+    font-size: 14px; font-weight: 700;
+    text-align: right;
+    color: var(--on-surface);
+  }
+  .gain-row.divider {
+    border-top: 1px solid rgba(0,0,0,0.06);
+    padding-top: 18px;
+    margin-top: 10px;
+  }
+  .gain-row.divider .gain-num {
+    font-size: 16px;
+    background: linear-gradient(115deg, #25a6c4, #6a55e0, #ff6b8b);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* === ANALYSIS === */
+  .failure-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 56px;
+  }
+  .failure-card {
+    background: var(--surface);
+    border: 1px solid var(--outline-soft);
+    border-radius: var(--r-lg);
+    padding: 28px 24px;
+    position: relative;
+    transition: all 0.4s var(--ease-emph);
+    overflow: hidden;
+  }
+  .failure-card:hover { transform: translateY(-4px); box-shadow: var(--e2); }
+  .failure-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+  }
+  .failure-card.fc-blue::before { background: var(--g-blue); }
+  .failure-card.fc-red::before { background: var(--g-red); }
+  .failure-card.fc-yellow::before { background: var(--g-yellow); }
+  .failure-card.fc-green::before { background: var(--g-green); }
+  .failure-card .fc-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px; font-weight: 600;
+    padding: 4px 10px;
+    border-radius: var(--r-pill);
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    background: var(--surface-1);
+    color: var(--on-surface-var);
+  }
+  .failure-card .fc-tag::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .failure-card.fc-blue .fc-tag::before { background: var(--g-blue); }
+  .failure-card.fc-red .fc-tag::before { background: var(--g-red); }
+  .failure-card.fc-yellow .fc-tag::before { background: var(--g-yellow); }
+  .failure-card.fc-green .fc-tag::before { background: var(--g-green); }
+  .failure-card .fc-big {
+    font-size: 56px; font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    margin-bottom: 12px;
+  }
+  .failure-card.fc-blue .fc-big { color: var(--g-blue); }
+  .failure-card.fc-red .fc-big { color: var(--g-red); }
+  .failure-card.fc-yellow .fc-big { color: #c08800; }
+  .failure-card.fc-green .fc-big { color: var(--g-green); }
+  .failure-card h4 {
+    font-size: 17px; font-weight: 600;
+    margin-bottom: 10px;
+    letter-spacing: -0.015em;
+  }
+  .failure-card p {
+    font-size: 13px;
+    color: var(--on-surface-var);
+    line-height: 1.55;
+  }
+
+  .cases-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .case-tab {
+    background: var(--surface);
+    border: 1px solid var(--outline-soft);
+    color: var(--on-surface-var);
+    font-family: var(--sans);
+    font-size: 13px; font-weight: 500;
+    padding: 8px 16px;
+    border-radius: var(--r-pill);
+    cursor: pointer;
+    transition: all 0.25s var(--ease-std);
+  }
+  .case-tab:hover { border-color: var(--g-blue); color: var(--g-blue); }
+  .case-tab.active {
+    background: var(--on-surface);
+    color: white;
+    border-color: var(--on-surface);
+  }
+
+  .case-card {
+    background: var(--surface);
+    border-radius: var(--r-lg);
+    padding: 40px;
+    border: 1px solid var(--outline-soft);
+    box-shadow: var(--e1);
+    display: block;
+  }
+
+  .case-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px;
+    flex-wrap: wrap; gap: 12px;
+  }
+  .case-head .case-tag {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--surface-1);
+    padding: 6px 14px;
+    border-radius: var(--r-pill);
+    font-size: 12px; font-weight: 600;
+    color: var(--on-surface-var);
+  }
+  /* Case top: image + question side by side */
+  .case-top {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 28px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 768px) { .case-top { grid-template-columns: 1fr; } }
+  .case-image {
+    aspect-ratio: 4/3;
+  }
+  .case-image .img-placeholder { height: 100%; }
+  .case-question {
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 1.4;
+    letter-spacing: -0.015em;
+    align-self: center;
+  }
+  .case-question::before {
+    content: '“';
+    font-family: var(--serif);
+    font-size: 56px;
+    line-height: 0;
+    vertical-align: -20px;
+    color: var(--g-blue);
+    margin-right: 6px;
+  }
+
+  /* Case question block (replaces old case-top) */
+  .case-question-block {
+    padding: 20px 24px;
+    background: var(--surface-1);
+    border-radius: var(--r-md);
+    margin-bottom: 20px;
+    border-left: 4px solid var(--g-blue);
+  }
+  .case-question-block .case-question {
+    font-size: 19px;
+    margin: 0;
+  }
+
+  /* === NEW: Grounding visualization === */
+  .case-grounding {
+    margin: 0 0 24px 0;
+    padding: 20px;
+    background: linear-gradient(135deg, rgba(71,150,227,0.04), rgba(146,104,192,0.03));
+    border: 1px solid rgba(71,150,227,0.12);
+    border-radius: var(--r-md);
+  }
+  .case-grounding-label {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--mono);
+    font-size: 11px; font-weight: 700;
+    color: var(--g-blue);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .case-grounding-label .gl-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--g-blue);
+    box-shadow: 0 0 0 4px var(--g-blue-soft);
+  }
+  .case-grounding-grid {
+    display: grid;
+    grid-template-columns: 1fr 60px 1fr;
+    gap: 12px;
+    align-items: center;
+  }
+  @media (max-width: 700px) {
+    .case-grounding-grid {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+    .case-grounding-arrow { transform: rotate(90deg); justify-self: center; }
+  }
+  .case-grounding-pane {
+    background: var(--surface);
+    border: 1px solid var(--outline-soft);
+    border-radius: var(--r-sm);
+    overflow: hidden;
+  }
+  .case-grounding-pane .cgp-label {
+    padding: 8px 12px;
+    font-family: var(--mono);
+    font-size: 10px; font-weight: 700;
+    color: var(--on-surface-var);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: var(--surface-1);
+    border-bottom: 1px solid var(--outline-soft);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .case-grounding-pane .cgp-img {
+    aspect-ratio: 4/3;
+    background-color: #1a1c1e;
+    background-repeat: no-repeat;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.5);
+    font-family: var(--mono);
+    font-size: 11px;
+    text-align: center;
+    padding: 12px;
+  }
+  .case-grounding-pane.full .cgp-img {
+    background-size: cover;
+  }
+  .case-grounding-pane.crop .cgp-img {
+    background-size: contain;
+    background-color: #fafafa;
+    color: var(--on-surface-var);
+  }
+  .case-grounding-pane.full .cgp-label .lbl-tag {
+    color: var(--g-red);
+    padding: 2px 6px;
+    background: var(--g-red-soft);
+    border-radius: 3px;
+    font-size: 9px;
+  }
+  .case-grounding-pane.crop .cgp-label .lbl-tag {
+    color: #1e6b35;
+    padding: 2px 6px;
+    background: var(--g-green-soft);
+    border-radius: 3px;
+    font-size: 9px;
+  }
+  .case-grounding-arrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    color: var(--g-blue);
+  }
+  .case-grounding-arrow svg { width: 28px; height: 28px; }
+  .case-grounding-arrow .arr-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--g-blue);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .case-compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 768px) { .case-compare { grid-template-columns: 1fr; } }
+  .case-side {
+    padding: 22px;
+    border-radius: var(--r-md);
+  }
+  .case-side.wrong { background: var(--g-red-soft); border: 1px solid rgba(234,67,53,0.2); }
+  .case-side.right { background: var(--g-green-soft); border: 1px solid rgba(52,168,83,0.25); }
+  .case-side .cs-head {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 600; font-size: 14px;
+    margin-bottom: 12px;
+  }
+  .case-side.wrong .cs-head { color: var(--g-red); }
+  .case-side.right .cs-head { color: #1e6b35; }
+  .case-side .cs-icon {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: white;
+    font-weight: 700; font-size: 13px;
+  }
+  .case-side.wrong .cs-icon { background: var(--g-red); }
+  .case-side.right .cs-icon { background: var(--g-green); }
+  .case-side .cs-body {
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--on-surface);
+  }
+  .case-side .cs-body .hl {
+    background: rgba(255,255,255,0.55);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+  .case-side.right .cs-body .hl { background: rgba(255,255,255,0.7); }
+  .case-truth-row {
+    display: flex; align-items: center; gap: 16px;
+    padding: 14px 18px;
+    background: var(--g-blue-soft);
+    border-radius: var(--r-md);
+  }
+  .case-truth-row .ct-label {
+    font-size: 12px; font-weight: 600;
+    color: var(--g-blue);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .case-truth-row .ct-value {
+    font-size: 18px; font-weight: 600;
+    color: var(--g-blue);
+  }
+
+  /* === CTA === */
+  .cta-section {
+    background: linear-gradient(135deg, var(--on-surface) 0%, #2a2c30 100%);
+    color: white;
+    padding: 100px 48px;
+    position: relative;
+    overflow: hidden;
+  }
+  .cta-section::before {
+    content: '';
+    position: absolute;
+    top: -200px; right: -100px;
+    width: 600px; height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(146,104,192,0.25), transparent 70%);
+    filter: blur(40px);
+  }
+  .cta-section::after {
+    content: '';
+    position: absolute;
+    bottom: -200px; left: -100px;
+    width: 500px; height: 500px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(71,150,227,0.20), transparent 70%);
+    filter: blur(40px);
+  }
+  .cta-content {
+    max-width: 1280px; margin: 0 auto;
+    position: relative; z-index: 1;
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 56px;
+    align-items: center;
+  }
+  @media (max-width: 900px) { .cta-content { grid-template-columns: 1fr; gap: 32px; } }
+  .cta-content h2 {
+    font-size: clamp(32px, 4vw, 48px);
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    margin-bottom: 20px;
+  }
+  .cta-content h2 .gradient {
+    background: linear-gradient(115deg, var(--aurora-3), var(--aurora-4));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-family: var(--serif);
+    font-style: italic;
+  }
+  .cta-content > div > p {
+    font-size: 17px;
+    line-height: 1.6;
+    color: rgba(255,255,255,0.75);
+    max-width: 540px;
+  }
+  .cta-actions {
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .cta-link {
+    display: flex; align-items: center; gap: 16px;
+    padding: 20px 24px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: var(--r-md);
+    text-decoration: none;
+    color: white;
+    transition: all 0.3s var(--ease-emph);
+    backdrop-filter: blur(10px);
+  }
+  .cta-link:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(255,255,255,0.3);
+    transform: translateX(4px);
+  }
+  .cta-link .cl-icon {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .cta-link .cl-icon svg { width: 18px; height: 18px; color: white; }
+  .cta-link .cl-text { flex: 1; min-width: 0; }
+  .cta-link .cl-title { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+  .cta-link .cl-sub { font-size: 13px; color: rgba(255,255,255,0.6); }
+  .cta-link .cl-arrow {
+    color: rgba(255,255,255,0.4);
+    transition: transform 0.3s var(--ease-emph);
+    flex-shrink: 0;
+  }
+  .cta-link:hover .cl-arrow { transform: translateX(4px); color: white; }
+
+  /* === FOOTER === */
+  footer {
+    background: var(--surface);
+    padding: 64px 48px 32px;
+    border-top: 1px solid var(--outline-soft);
+  }
+  .footer-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding-bottom: 32px;
+    border-bottom: 1px solid var(--outline-soft);
+    margin-bottom: 24px;
+  }
+  .footer-inner .ft-brand {
+    font-size: 22px; font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .footer-inner .ft-brand .dot {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: conic-gradient(from 180deg, var(--aurora-1), var(--aurora-2), var(--aurora-3), var(--aurora-4), var(--aurora-1));
+  }
+  .footer-inner .ft-brand .ft-logo {
+    width: 34px; height: 34px;
+    border-radius: 8px;
+    object-fit: contain;
+    display: block;
+  }
+  .footer-inner p {
+    font-size: 14px;
+    color: var(--on-surface-var);
+    line-height: 1.6;
+    max-width: 360px;
+  }
+  .footer-inner h5 {
+    font-size: 11px; font-weight: 600;
+    color: var(--on-surface-var);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 16px;
+  }
+  .footer-inner ul { list-style: none; }
+  .footer-inner ul li {
+    font-size: 14px;
+    color: var(--on-surface);
+    margin-bottom: 10px;
+  }
+  .copyright {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--on-surface-var);
+  }
+
+  /* === IMAGE GUIDE BANNER (helpful for users replacing images) === */
+  .img-guide {
+    background: var(--g-blue-soft);
+    border: 1px solid rgba(26,115,232,0.2);
+    border-radius: var(--r-md);
+    padding: 16px 20px;
+    margin-bottom: 32px;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    font-size: 13px;
+    color: var(--g-blue);
+    line-height: 1.5;
+  }
+  .img-guide svg { flex-shrink: 0; width: 18px; height: 18px; margin-top: 1px; }
+  .img-guide strong { font-weight: 700; }
+  .img-guide code {
+    background: rgba(26,115,232,0.1);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+
+  /* === RESPONSIVE === */
+  @media (max-width: 1024px) {
+    nav { padding: 10px 14px; }
+    nav ul { display: none; }
+    nav .cta-btn { padding: 6px 12px; font-size: 12px; }
+    .hero { padding: 110px 24px 60px; }
+    section.content, .scenarios-section, .results-section, .cta-section { padding: 80px 24px; }
+    .quickscan { padding: 24px; }
+    .quickscan-inner { grid-template-columns: 1fr; gap: 16px; }
+    .quickscan-bullets { grid-template-columns: 1fr; gap: 12px; }
+    .problem-grid { grid-template-columns: 1fr; }
+    .scenarios-grid { grid-template-columns: repeat(2, 1fr); }
+    .method-flow { grid-template-columns: repeat(2, 1fr); }
+    .failure-grid { grid-template-columns: repeat(2, 1fr); }
+    .takeaways { grid-template-columns: 1fr; }
+    .leaderboard { display: none; }
+    .leaderboard-mobile { display: block; }
+    .gain-row { grid-template-columns: 1fr; gap: 8px; }
+    .gain-row .gain-num { text-align: left; }
+    .story-card { padding: 32px 24px; }
+    .wt-text { padding: 28px; }
+    .wt-steps { padding: 24px; }
+    .case-card { padding: 28px; }
+  }
+  @media (max-width: 640px) {
+    .scenarios-grid { grid-template-columns: 1fr; }
+    .failure-grid { grid-template-columns: 1fr; }
+    .method-flow { grid-template-columns: 1fr; }
+    .copyright { flex-direction: column; gap: 8px; }
+  }
+
+  /* === 图片快速注入 === */
+  /* Scenario cards: use contain to show full paper figure with magnifier overlay */
+  .scenario-thumb .img-placeholder[data-img] {
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    background-color: #1a1c1e !important;
+    border: none !important;
+  }
+  /* Walkthrough hero example image: contain to keep magnifier visible */
+  .wt-image .img-placeholder[data-img] {
+    background-size: cover !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    border: none !important;
+  }
+  /* Case study images can use cover since they're cropped close-ups */
+  .case-image .img-placeholder[data-img] {
+    background-size: cover !important;
+    background-position: center !important;
+    border: none !important;
+  }
+
+  [data-img="example-traffic"], [data-img="sample-traffic"], [data-img="scenario-traffic"] {
+    background-image: url('images/fig6-traffic.jpg');
+  }
+  [data-img="scenario-people"], [data-img="sample-people"] {
+    background-image: url('images/fig7-people.jpg');
+  }
+  [data-img="scenario-cultural"], [data-img="sample-cultural"] {
+    background-image: url('images/fig8-library.jpg');
+  }
+  [data-img="scenario-market"], [data-img="sample-market"] {
+    background-image: url('images/fig9-flowers.jpg');
+  }
+  [data-img="scenario-retail"], [data-img="sample-retail"] {
+    background-image: url('images/fig10-ikea.jpg');
+  }
+  [data-img="scenario-street"], [data-img="sample-street"] {
+    background-image: url('images/fig11-paris.jpg');
+  }
+  [data-img="scenario-landmarks"], [data-img="sample-landmark"] {
+    background-image: url('images/fig12-potala.jpg');
+  }
+  [data-img="scenario-cityscape"], [data-img="sample-cityscape"] {
+    background-image: url('images/fig13-shanghai.jpg');
+  }
+  [data-img="case-nike"] {
+    background-image: url('images/case-nike.jpg');
+  }
+  [data-img="case-uniqlo"] {
+    background-image: url('images/case-uniqlo.jpg');
+  }
+  [data-img="case-nike-crop"] {
+    background-image: url('images/case-nike-crop.jpg');
+  }
+  [data-img="case-uniqlo-crop"] {
+    background-image: url('images/case-uniqlo-crop.jpg');
+  }
+  [data-img="paper-pipeline"] {
+    background-image: url('images/paper-pipeline.jpg');
+    background-color: #fafafa !important;
+  }
+  /* 隐藏占位内容(已有真实图) */
+  .img-placeholder[data-img] .ip-content {
+    display: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="read-progress" id="readProgress"></div>
+
+<nav>
+  <div class="brand">
+    <img class="brand-logo" src="images/logo_pix2fact.png" alt="Pix2Fact" />
+    <span class="name">Pix<b>2</b>Fact</span>
+  </div>
+  <div class="right">
+    <ul>
+      <li><a href="#problem">Problem</a></li>
+      <li><a href="#benchmark">Dataset</a></li>
+      <li><a href="#results">Results</a></li>
+      <li><a href="#analysis">Analysis</a></li>
+    </ul>
+    <a class="cta-btn" href="https://arxiv.org/abs/2602.00593" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+      Paper
+    </a>
+  </div>
+</nav>
+
+<!-- ============================================================
+  HERO
+============================================================ -->
+<header class="hero">
+  <div class="hero-blob"></div>
+  <div class="hero-content">
+    <div>
+      <div class="chip">
+        <span class="chip-dot"></span>
+        <span>New benchmark · arXiv 2602.00593</span>
+      </div>
+      <h1 class="hero-title">When vision is<br><span class="gradient">not enough.</span></h1>
+      <p class="hero-sub">
+        A visual question-answering benchmark of 1,000 expert-crafted questions on
+        4K+ real-world scenes — where every answer demands both fine-grained
+        visual grounding <em>and</em> open-web knowledge search.
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="https://arxiv.org/abs/2602.00593" target="_blank" rel="noopener">
+          <span>Read the paper</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M7 7h10v10"/></svg>
+        </a>
+        <a class="btn btn-secondary" href="#example">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+          <span>See an example</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="hero-hook">
+      <div class="hook-label">The accuracy gap</div>
+      <div class="hook-row human">
+        <div class="hook-logo"><img src="images/logo-phd.png" alt="PhD" /></div>
+        <div class="who">
+          Human expert
+          <span class="sub">PhD annotators, with web access</span>
+        </div>
+        <div class="score">~100<span class="pct">%</span></div>
+      </div>
+      <div class="hook-arrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+      </div>
+      <div class="hook-row best">
+        <div class="hook-logo"><img src="images/logo-gemini.jpg" alt="Gemini" /></div>
+        <div class="who">
+          Gemini 3.1 Pro
+          <span class="sub">Best model · crop + search</span>
+        </div>
+        <div class="score">51.7<span class="pct">%</span></div>
+      </div>
+      <div class="hook-row avg">
+        <div class="hook-logo-group">
+          <div class="hook-logo sm"><img src="images/logo-qwen.png" alt="Qwen" /></div>
+          <div class="hook-logo sm"><img src="images/logo-zhipu.png" alt="GLM" /></div>
+          <div class="hook-logo sm"><img src="images/gemma-color.png" alt="Gemma" /></div>
+        </div>
+        <div class="who">
+          Open-source avg
+          <span class="sub">Qwen, GLM, Gemma · same setting</span>
+        </div>
+        <div class="score">23.2<span class="pct">%</span></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ============================================================
+  TLDR
+============================================================ -->
+<div class="quickscan">
+  <div class="quickscan-inner">
+    <div class="quickscan-label">TL;DR</div>
+    <div class="quickscan-bullets">
+      <div class="qs-bullet"><strong>The bottleneck has shifted.</strong>Not perception alone — query construction and retrieval recall dominate failures.</div>
+      <div class="qs-bullet"><strong>Search beats sight, but only together.</strong>Cropping triples in value when combined with web search (3.49× synergy).</div>
+      <div class="qs-bullet"><strong>Long-tail knowledge breaks everything.</strong>Local phone numbers, small business hours, niche product specs — unreachable.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+  PROBLEM
+============================================================ -->
+<section class="content" id="problem">
+  <div class="section-head">
+    <div class="section-tag"><span class="num">01</span><span>The gap</span></div>
+    <h2 class="section-title">The promise of VLMs <span class="gradient">runs into</span> the messy last mile.</h2>
+  </div>
+
+  <!-- The tour guide story -->
+  <div class="story-card">
+    <div class="story-text">
+      Picture a tour guide spotting a distant mountain and telling you its history.
+      For humans this is automatic — <em>effortlessly linking subtle visual cues with
+      structured facts via broad knowledge</em>. For modern Vision-Language Models,
+      it remains nearly impossible. The challenge is not visual grounding or knowledge
+      search alone, but <em>their tight coupling</em>.
+    </div>
+    <div class="story-attribution">— From the Pix2Fact paper, Section 1</div>
+  </div>
+
+  <div class="problem-grid">
+    <div class="problem-card blue">
+      <div class="step-num">01</div>
+      <div class="pc-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      </div>
+      <h3>Pixel-level grounding</h3>
+      <p>Locate a small visual detail — a phone number on a sign, a logo on a tent, a book title spine-on — inside a 4K+ scene full of distractors.</p>
+    </div>
+    <div class="problem-card red">
+      <div class="step-num">02</div>
+      <div class="pc-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg>
+      </div>
+      <h3>Open-world retrieval</h3>
+      <p>Using only that detail, formulate a query, search the open web, navigate to unstructured sources, and extract the right fact.</p>
+    </div>
+    <div class="problem-card yellow">
+      <div class="step-num">03</div>
+      <div class="pc-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="5"/><circle cx="15" cy="12" r="5"/></svg>
+      </div>
+      <h3>Their conjunction</h3>
+      <p>Existing benchmarks test either one. Pix2Fact tests <em>both at once</em> — what real human assistance requires, and where today's models break.</p>
+    </div>
+  </div>
+
+  <!-- Walkthrough -->
+  <div class="walkthrough" id="example">
+    <div class="walkthrough-top">
+      <div class="wt-image">
+        <!-- IMAGE: replace with paper's Figure 6 (Traffic & Infrastructure example) -->
+        <div class="img-placeholder" data-img="example-traffic">
+          <div class="ip-content">
+            <div class="ip-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
+            </div>
+            <div class="ip-name">Figure 6 · Traffic & Infrastructure</div>
+            <div class="ip-hint">Highway aerial · mall behind scaffolding<br>(replace with 4K original)</div>
+          </div>
+        </div>
+      </div>
+      <div class="wt-text">
+        <div class="ex-label">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          <span>A real Pix2Fact question</span>
+        </div>
+        <div class="wt-question-label">A tourist might naturally ask:</div>
+        <div class="question">"The building behind the scaffolding is a mall. Which number should we call for leasing inquiries to open a clothing store there?"</div>
+        <div class="wt-answer-block">
+          <div class="wt-answer-label">Correct answer</div>
+          <div class="answer-pill">
+            <div class="check">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+            </div>
+            <div class="answer-value">(86 10) 6505-6688</div>
+          </div>
+        </div>
+        <div class="wt-helper">
+          <strong>What a model has to do:</strong> get past the foreground roads, through the scaffolding, read the sign, identify the specific mall, then navigate its website to the leasing page — a chain general search engines rarely surface directly.
+        </div>
+      </div>
+    </div>
+
+    <div class="wt-steps">
+      <div class="wt-steps-label">Why this is hard · the 5 things a model must do, in order</div>
+      <div class="wt-stepper">
+        <div class="wt-step">
+          <div class="ws-num">1</div>
+          <h5>Locate the right building</h5>
+          <p>Past foreground roads &amp; distractor buildings.</p>
+          <div class="ws-skill">SPATIAL · GROUNDING</div>
+        </div>
+        <div class="wt-step">
+          <div class="ws-num">2</div>
+          <h5>Read tiny signage</h5>
+          <p>OCR the mall name from behind scaffolding.</p>
+          <div class="ws-skill">FINE OCR</div>
+        </div>
+        <div class="wt-step">
+          <div class="ws-num">3</div>
+          <h5>Identify which mall</h5>
+          <p>Disambiguate among real-world entities.</p>
+          <div class="ws-skill">ENTITY LINKING</div>
+        </div>
+        <div class="wt-step">
+          <div class="ws-num">4</div>
+          <h5>Find the official site</h5>
+          <p>Construct a query that surfaces the right page.</p>
+          <div class="ws-skill">QUERY · RETRIEVAL</div>
+        </div>
+        <div class="wt-step">
+          <div class="ws-num">5</div>
+          <h5>Extract the contact</h5>
+          <p>Navigate to leasing page, isolate the number.</p>
+          <div class="ws-skill">NAVIGATION · EXTRACT</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+  SCENARIOS
+============================================================ -->
+<section class="scenarios-section" id="benchmark">
+  <div class="scenarios-wrapper">
+    <div class="section-head">
+      <div class="section-tag"><span class="num">02</span><span>The dataset</span></div>
+      <h2 class="section-title">Eight scenes of <span class="gradient">everyday life.</span></h2>
+      <p class="section-lede">
+        1,000 questions across categories drawn from the visual texture of daily life.
+        Mean resolution 21.1 MP · 78% exceed 15 MP · max 77.7 MP.
+      </p>
+    </div>
+
+    <div class="scenarios-grid">
+      <div class="scenario-card tone-blue">
+        <div class="scenario-thumb">
+          <img src="images/fig7-people.jpg" alt="Street scene with people · Times Square" loading="lazy" />
+        </div>
+        <div class="scenario-body">
+          <div class="sc-tag">01 · 19.3%</div>
+          <h4>Street scene with people</h4>
+          <div class="count-row"><span class="count-num">193</span><span class="count-pct">questions</span></div>
+          <div class="progress"><div class="progress-fill" style="width: 100%;"></div></div>
+        </div>
+      </div>
+
+      <div class="scenario-card tone-red">
+        <div class="scenario-thumb">
+          <img src="images/fig11-paris.jpg" alt="Storefronts & street facades · Paris alley" loading="lazy" />
+        </div>
+        <div class="scenario-body">
+          <div class="sc-tag">02 · 14.4%</div>
+          <h4>Storefronts &amp; facades</h4>
+          <div class="count-row"><span class="count-num">144</span><span class="count-pct">questions</span></div>
+          <div class="progress"><div class="progress-fill" style="width: 74.6%;"></div></div>
+        </div>
+      </div>
+
+      <div class="scenario-card tone-yellow">
+        <div class="scenario-thumb">
+          <img src="images/fig10-ikea.jpg" alt="Retail & commercial interior · IKEA" loading="lazy" />
+        </div>
+        <div class="scenario-body">
+          <div class="sc-tag">03 · 12.9%</div>
+          <h4>Retail &amp; commercial interior</h4>
+          <div class="count-row"><span class="count-num">129</span><span class="count-pct">questions</span></div>
+          <div class="progress"><div class="progress-fill" style="width: 66.8%;"></div></div>
+        </div>
+      </div>
+
+      <div class="scenario-card tone-green">
+        <div class="scenario-thumb">
+          <img src="images/fig6-traffic.jpg" alt="Traffic & infrastructure · highway" loading="lazy" />
+        </div>
+        <div class="scenario-body">
+          <div class="sc-tag">04 · 12.5%</div>
+          <h4>Traffic &amp; infrastructure</h4>
+          <div class="count-row"><span class="count-num">125</span><span class="count-pct">questions</span></div>
+          <div class="progress"><div class="progress-fill" style="width: 64.8%;"></div></div>
+        </div>
+      </div>
+
+      <div class="scenario-card tone-blue">
+        <div class="scenario-thumb">
+          <img src="images/fig9-flowers.jpg" alt="Markets & outdoor vendors · flower stall" loading="lazy" />
+        </div>
+        <div class="scenario-body">
+          <div class="sc-tag">05 · 11.1%</div>
+          <h4>Markets &amp; outdoor vendors</h4>
+          <div class="count-row"><span class="count-num">111</span><span class="count-pct">questions</span></div>
+          <div class="progress"><div class="progress-fill" style="width: 57.5%;"></div></div>
+        </div>
+      </div>
+
+      <div class="scenario-card tone-red">
+        <div class="scenario-thumb">
+          <img src="images/fig8-library.jpg" alt="Public & cultural interior · library" loading="lazy" />
+        </div>
+        <div class="scenario-body">
+          <div class="sc-tag">06 · 10.5%</div>
+          <h4>Public &amp; cultural interior</h4>
+          <div class="count-row"><span class="count-num">105</span><span class="count-pct">questions</span></div>
+          <div class="progress"><div class="progress-fill" style="width: 54.4%;"></div></div>
+        </div>
+      </div>
+
+      <div class="scenario-card tone-yellow">
+        <div class="scenario-thumb">
+          <img src="images/fig12-potala.jpg" alt="Landmarks & attractions · Potala Palace" loading="lazy" />
+        </div>
+        <div class="scenario-body">
+          <div class="sc-tag">07 · 10.3%</div>
+          <h4>Landmarks &amp; attractions</h4>
+          <div class="count-row"><span class="count-num">103</span><span class="count-pct">questions</span></div>
+          <div class="progress"><div class="progress-fill" style="width: 53.4%;"></div></div>
+        </div>
+      </div>
+
+      <div class="scenario-card tone-green">
+        <div class="scenario-thumb">
+          <img src="images/fig13-shanghai.jpg" alt="Cityscape & aerial · Shanghai skyline" loading="lazy" />
+        </div>
+        <div class="scenario-body">
+          <div class="sc-tag">08 · 9.0%</div>
+          <h4>Cityscape &amp; aerial</h4>
+          <div class="count-row"><span class="count-num">90</span><span class="count-pct">questions</span></div>
+          <div class="progress"><div class="progress-fill" style="width: 46.6%;"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================
+      SAMPLE QUESTIONS GALLERY — all 8 paper examples
+    ============================================================ -->
+    <div class="samples-section">
+      <div class="samples-head">
+        <h3>One real question per scenario — <span class="gradient">try them yourself.</span></h3>
+        <p>These are the eight representative examples from the paper (Figures 6–13).
+        Each was crafted by a PhD annotator and requires both fine-grained visual grounding
+        and external web search to answer.</p>
+      </div>
+
+      <div class="samples-tabs" id="samples-tabs">
+        <button class="sample-tab active" data-sample="s1"><span class="st-num">1</span>Traffic</button>
+        <button class="sample-tab" data-sample="s2"><span class="st-num">2</span>People</button>
+        <button class="sample-tab" data-sample="s3"><span class="st-num">3</span>Cultural</button>
+        <button class="sample-tab" data-sample="s4"><span class="st-num">4</span>Markets</button>
+        <button class="sample-tab" data-sample="s5"><span class="st-num">5</span>Retail</button>
+        <button class="sample-tab" data-sample="s6"><span class="st-num">6</span>Storefronts</button>
+        <button class="sample-tab" data-sample="s7"><span class="st-num">7</span>Landmarks</button>
+        <button class="sample-tab" data-sample="s8"><span class="st-num">8</span>Cityscape</button>
+      </div>
+
+      <div class="sample-cards-wrap" id="samples-wrap">
+
+        <!-- Sample 1 · Traffic & Infrastructure (Fig 6) -->
+        <div class="sample-card tone-blue active" id="sample-s1">
+          <div class="sc-image">
+            <img src="images/fig6-traffic.jpg" alt="Traffic & infrastructure · highway aerial" loading="lazy" />
+          </div>
+          <div class="sc-text">
+            <div class="sc-cat">Traffic &amp; Infrastructure</div>
+            <div class="sc-fig">PAPER · FIG 6</div>
+            <div class="sc-question">The building behind the scaffolding is a mall. We want to open a store for our clothing brand there. Do you know which number we should contact for leasing inquiries?</div>
+            <div class="sc-answer-row">
+              <div class="sc-ans-icon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+              </div>
+              <span class="sc-ans-label">Answer</span>
+              <span class="sc-ans-value">(86 10) 6505 6688</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sample 2 · Street Scene with People (Fig 7) -->
+        <div class="sample-card tone-red" id="sample-s2">
+          <div class="sc-image">
+            <img src="images/fig7-people.jpg" alt="Street with people · Times Square" loading="lazy" />
+          </div>
+          <div class="sc-text">
+            <div class="sc-cat">Street Scene with People</div>
+            <div class="sc-fig">PAPER · FIG 7</div>
+            <div class="sc-question">If I want to take the bus on the right in this picture for a one-day tour of the city, what is the lowest official website ticket price in USD?</div>
+            <div class="sc-answer-row">
+              <div class="sc-ans-icon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+              </div>
+              <span class="sc-ans-label">Answer</span>
+              <span class="sc-ans-value">$48</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sample 3 · Public and Cultural Interior (Fig 8) -->
+        <div class="sample-card tone-yellow" id="sample-s3">
+          <div class="sc-image">
+            <img src="images/fig8-library.jpg" alt="Public & cultural interior · library" loading="lazy" />
+          </div>
+          <div class="sc-text">
+            <div class="sc-cat">Public &amp; Cultural Interior</div>
+            <div class="sc-fig">PAPER · FIG 8</div>
+            <div class="sc-question">Identify the name of a book on the bookshelf that starts with A and ends with G. I have a book ready for publication and want to contact the publisher of this book. What is the phone number of this publisher in the UK?</div>
+            <div class="sc-answer-row">
+              <div class="sc-ans-icon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+              </div>
+              <span class="sc-ans-label">Answer</span>
+              <span class="sc-ans-value">+44 20 3122 6000</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sample 4 · Markets and Outdoor Vendors (Fig 9) -->
+        <div class="sample-card tone-green" id="sample-s4">
+          <div class="sc-image">
+            <img src="images/fig9-flowers.jpg" alt="Markets & outdoor vendors · flower market" loading="lazy" />
+          </div>
+          <div class="sc-text">
+            <div class="sc-cat">Markets &amp; Outdoor Vendors</div>
+            <div class="sc-fig">PAPER · FIG 9</div>
+            <div class="sc-question">Next week is my friend's graduation ceremony, and I would like to prepare a bouquet for her. What are the opening hours of the flower brand store shown in the image, excluding Saturdays and Sundays?</div>
+            <div class="sc-answer-row">
+              <div class="sc-ans-icon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+              </div>
+              <span class="sc-ans-label">Answer</span>
+              <span class="sc-ans-value">08:00 – 17:00</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sample 5 · Retail and Commercial Interior (Fig 10) -->
+        <div class="sample-card tone-blue" id="sample-s5">
+          <div class="sc-image">
+            <img src="images/fig10-ikea.jpg" alt="Retail & commercial interior · IKEA" loading="lazy" />
+          </div>
+          <div class="sc-text">
+            <div class="sc-cat">Retail &amp; Commercial Interior</div>
+            <div class="sc-fig">PAPER · FIG 10</div>
+            <div class="sc-question">The store's logo is right under the white tag on the left of the photo. I heard that the quality of this brand's daily necessities is good. I want to buy a thermos on the Chinese official website of this brand. What is the capacity (in liters) of the most expensive thermos?</div>
+            <div class="sc-answer-row">
+              <div class="sc-ans-icon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+              </div>
+              <span class="sc-ans-label">Answer</span>
+              <span class="sc-ans-value">1 Liter</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sample 6 · Street Scene Environment (Fig 11) -->
+        <div class="sample-card tone-red" id="sample-s6">
+          <div class="sc-image">
+            <img src="images/fig11-paris.jpg" alt="Storefronts & street facades · Paris alley" loading="lazy" />
+          </div>
+          <div class="sc-text">
+            <div class="sc-cat">Storefronts &amp; Facades</div>
+            <div class="sc-fig">PAPER · FIG 11</div>
+            <div class="sc-question">I was chatting with a friend about movie poster designs, and when I came across this picture, I got curious about who the director is. I'd like to know which of this director's films is second on Rotten Tomatoes?</div>
+            <div class="sc-answer-row">
+              <div class="sc-ans-icon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+              </div>
+              <span class="sc-ans-label">Answer</span>
+              <span class="sc-ans-value">Songs My Brothers Taught Me</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sample 7 · Landmarks and Attractions (Fig 12) -->
+        <div class="sample-card tone-yellow" id="sample-s7">
+          <div class="sc-image">
+            <img src="images/fig12-potala.jpg" alt="Landmarks & attractions · Potala Palace" loading="lazy" />
+          </div>
+          <div class="sc-text">
+            <div class="sc-cat">Landmarks &amp; Attractions</div>
+            <div class="sc-fig">PAPER · FIG 12</div>
+            <div class="sc-question">The red logo on the blue tent in the photo belongs to an energy drink brand. I'm looking to contact their Beijing branch about becoming a distributor. Could you tell me what number I should call?</div>
+            <div class="sc-answer-row">
+              <div class="sc-ans-icon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+              </div>
+              <span class="sc-ans-label">Answer</span>
+              <span class="sc-ans-value">010-85288029-8010</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sample 8 · Cityscape and Aerial (Fig 13) -->
+        <div class="sample-card tone-green" id="sample-s8">
+          <div class="sc-image">
+            <img src="images/fig13-shanghai.jpg" alt="Cityscape & aerial · Shanghai skyline" loading="lazy" />
+          </div>
+          <div class="sc-text">
+            <div class="sc-cat">Cityscape &amp; Aerial</div>
+            <div class="sc-fig">PAPER · FIG 13</div>
+            <div class="sc-question">Identify the vertical text on the building on the left in the picture, which is the name of a hotel. Our company's annual meeting requires booking a banquet venue of more than 1,000 square meters. How many event rooms are available for us to choose from at this hotel?</div>
+            <div class="sc-answer-row">
+              <div class="sc-ans-icon">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+              </div>
+              <span class="sc-ans-label">Answer</span>
+              <span class="sc-ans-value">6 rooms</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      <div class="sample-nav">
+        <button class="sample-nav-btn" id="sample-prev" aria-label="Previous">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div class="sample-dots" id="sample-dots">
+          <button class="sample-dot active" data-idx="0" aria-label="Sample 1"></button>
+          <button class="sample-dot" data-idx="1" aria-label="Sample 2"></button>
+          <button class="sample-dot" data-idx="2" aria-label="Sample 3"></button>
+          <button class="sample-dot" data-idx="3" aria-label="Sample 4"></button>
+          <button class="sample-dot" data-idx="4" aria-label="Sample 5"></button>
+          <button class="sample-dot" data-idx="5" aria-label="Sample 6"></button>
+          <button class="sample-dot" data-idx="6" aria-label="Sample 7"></button>
+          <button class="sample-dot" data-idx="7" aria-label="Sample 8"></button>
+        </div>
+        <span class="sample-counter"><span class="current" id="sample-current">1</span> / 8</span>
+        <button class="sample-nav-btn" id="sample-next" aria-label="Next">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Method -->
+    <div class="pipeline-section">
+      <div class="pipeline-head">
+        <div class="pipeline-tag">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          <span>Quality assurance · Section 3.2</span>
+        </div>
+        <h3>How each (Q, A) is built — <span class="pipeline-grad">industrial-grade quality.</span></h3>
+        <p class="pipeline-lede">
+          Every question survives a multi-stage authoring pipeline with three-tier PhD review.
+          Average <strong>35–40 minutes</strong> of expert labor per validated item — and ~38%
+          of drafted items are rejected during quality control.
+        </p>
+      </div>
+
+      <!-- Paper figure embed -->
+      <figure class="pipeline-figure">
+        <img class="pipeline-figure-img" src="images/paper-pipeline.jpg" alt="Pix2Fact data generation and evaluation pipeline" loading="lazy" />
+        <figcaption>
+          <strong>Figure 2</strong> · Data generation and evaluation pipeline.
+          Source images → expert annotation → 1-1 question pairing → ground-truth construction →
+          feasibility check → objective evaluation against three metric families.
+        </figcaption>
+      </figure>
+
+      <!-- Pipeline steps -->
+      <div class="method-flow">
+        <div class="method-step">
+          <div class="ms-num">/ 01</div>
+          <div class="ms-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a3 3 0 0 0-3-3h-4l-2-2H6a3 3 0 0 0-3 3v11a3 3 0 0 0 3 3h12a3 3 0 0 0 3-3z"/></svg></div>
+          <h4>Source</h4>
+          <p>Royalty-free platforms (Unsplash, Pexels, Pixabay). ≥2 MB · 4K–8K · CC-licensed.</p>
+          <div class="ms-stat"><span class="ms-stat-num">21.1<span class="ms-stat-unit">MP</span></span><span class="ms-stat-label">Mean resolution</span></div>
+        </div>
+        <div class="method-step">
+          <div class="ms-num">/ 02</div>
+          <div class="ms-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18M6 12h12M10 19h4"/></svg></div>
+          <h4>Filter &amp; categorize</h4>
+          <p>Composition review by domain experts. Eight scene categories drawn from daily-life visual texture.</p>
+          <div class="ms-stat"><span class="ms-stat-num">8<span class="ms-stat-unit">cats</span></span><span class="ms-stat-label">Scene taxonomy</span></div>
+        </div>
+        <div class="method-step">
+          <div class="ms-num">/ 03</div>
+          <div class="ms-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4z"/></svg></div>
+          <h4>Author Q &amp; ground-truth</h4>
+          <p>Each Q anchored to a unique pixel-level cue + 1–3 evidence URLs. Author logs reasoning chain.</p>
+          <div class="ms-stat"><span class="ms-stat-num">1–3<span class="ms-stat-unit">URLs</span></span><span class="ms-stat-label">Evidence sources</span></div>
+        </div>
+        <div class="method-step">
+          <div class="ms-num">/ 04</div>
+          <div class="ms-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg></div>
+          <h4>Three-tier review</h4>
+          <p>Author → peer reviewer → senior PhD adjudicator. Redundancy filter + consistency check at every gate.</p>
+          <div class="ms-stat"><span class="ms-stat-num">38<span class="ms-stat-unit">%</span></span><span class="ms-stat-label">Reject rate</span></div>
+        </div>
+      </div>
+
+      <!-- Quality stats row -->
+      <div class="qc-strip">
+        <div class="qc-item">
+          <div class="qc-num">1,000</div>
+          <div class="qc-label">Validated questions</div>
+        </div>
+        <div class="qc-divider"></div>
+        <div class="qc-item">
+          <div class="qc-num">~600h</div>
+          <div class="qc-label">Total expert labor</div>
+        </div>
+        <div class="qc-divider"></div>
+        <div class="qc-item">
+          <div class="qc-num">100%</div>
+          <div class="qc-label">PhD-author verified</div>
+        </div>
+        <div class="qc-divider"></div>
+        <div class="qc-item">
+          <div class="qc-num">3×</div>
+          <div class="qc-label">Independent review layers</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+  RESULTS
+============================================================ -->
+<section class="results-section" id="results">
+  <div class="results-wrapper">
+    <div class="section-head">
+      <div class="section-tag"><span class="num">03</span><span>Results</span></div>
+      <h2 class="section-title">Ten frontier VLMs · the ceiling sits at <span class="gradient">51.7%.</span></h2>
+      <p class="section-lede">
+        Each model is evaluated under four conditions formed by two binary axes:
+        <span class="term" data-tip="orig = the original full-resolution scene image. crop = an expert-annotated tight crop around the target.">original vs. expert-cropped image</span>,
+        and <span class="term" data-tip="The model can either operate purely on the image, or issue web queries during inference.">no-search vs. with web search</span>.
+        <strong>C4</strong> (cropped + search) is the best-case ceiling.
+      </p>
+    </div>
+
+    <div class="takeaways">
+      <div class="takeaway">
+        <div class="ta-stat">14pp</div>
+        <p><strong>Closed > open.</strong> Top three closed-weight models average 14 percentage points above the open-source group at C4.</p>
+      </div>
+      <div class="takeaway">
+        <div class="ta-stat">3.49×</div>
+        <p><strong>Search amplifies cropping.</strong> When combined with web search, expert cropping triples in value across all models.</p>
+      </div>
+      <div class="takeaway">
+        <div class="ta-stat">48pp</div>
+        <p><strong>Headroom remains.</strong> Best score (51.7%) still leaves a 48-point gap to human-level performance.</p>
+      </div>
+    </div>
+
+    <div class="leaderboard">
+      <div class="lb-header">
+        <div>#</div>
+        <div>Model</div>
+        <div class="col-c1"><span class="term" data-tip="Original image, no web search. The baseline — purely visual recognition.">C1</span><span class="col-sub">orig · no search</span></div>
+        <div class="col-c2"><span class="term" data-tip="Original image, web search enabled.">C2</span><span class="col-sub">orig · search</span></div>
+        <div class="col-c3"><span class="term" data-tip="Expert-cropped image, no web search.">C3</span><span class="col-sub">crop · no search</span></div>
+        <div class="col-c4"><span class="term" data-tip="Expert-cropped image, web search enabled. The best-case ceiling.">C4</span><span class="col-sub">crop · search</span></div>
+        <div style="text-align:right;">Avg</div>
+      </div>
+
+      <div class="lb-row leader">
+        <div class="lb-rank"><span class="lb-rank-pill">1</span></div>
+        <div class="lb-model"><span class="lb-logo lg-gemini"><img class="lb-logo-img" src="images/logo-gemini.jpg" alt="Gemini"></span>Gemini-3.1-Pro <span class="lb-tag closed">closed</span></div>
+        <div><span class="lb-cell c1">18.4%</span></div>
+        <div><span class="lb-cell c2">42.4%</span></div>
+        <div><span class="lb-cell c3">21.0%</span></div>
+        <div><span class="lb-cell c4"><strong>51.7%</strong></span></div>
+        <div class="lb-avg">33.4%</div>
+      </div>
+      <div class="lb-row">
+        <div class="lb-rank">02</div>
+        <div class="lb-model"><span class="lb-logo lg-gemini"><img class="lb-logo-img" src="images/logo-gemini.jpg" alt="Gemini"></span>Gemini-2.5-Pro <span class="lb-tag closed">closed</span></div>
+        <div><span class="lb-cell c1">14.6%</span></div>
+        <div><span class="lb-cell c2">29.1%</span></div>
+        <div><span class="lb-cell c3">18.6%</span></div>
+        <div><span class="lb-cell c4">39.0%</span></div>
+        <div class="lb-avg">25.3%</div>
+      </div>
+      <div class="lb-row">
+        <div class="lb-rank">03</div>
+        <div class="lb-model"><span class="lb-logo lg-gpt"><img class="lb-logo-img" src="images/logo-gpt.png" alt="GPT"></span>GPT-5.4 <span class="lb-tag closed">closed</span></div>
+        <div><span class="lb-cell c1">8.5%</span></div>
+        <div><span class="lb-cell c2">17.9%</span></div>
+        <div><span class="lb-cell c3">14.5%</span></div>
+        <div><span class="lb-cell c4">32.9%</span></div>
+        <div class="lb-avg">18.5%</div>
+      </div>
+      <div class="lb-row">
+        <div class="lb-rank">04</div>
+        <div class="lb-model"><span class="lb-logo lg-grok"><img class="lb-logo-img" src="images/logo-grok.png" alt="Grok"></span>Grok-4.20 <span class="lb-tag closed">closed</span></div>
+        <div><span class="lb-cell c1">4.4%</span></div>
+        <div><span class="lb-cell c2">22.3%</span></div>
+        <div><span class="lb-cell c3">7.3%</span></div>
+        <div><span class="lb-cell c4">38.8%</span></div>
+        <div class="lb-avg">18.2%</div>
+      </div>
+      <div class="lb-row">
+        <div class="lb-rank">05</div>
+        <div class="lb-model"><span class="lb-logo lg-claude"><img class="lb-logo-img" src="images/logo-claude.png" alt="Claude"></span>Claude Opus 4.7 <span class="lb-tag closed">closed</span></div>
+        <div><span class="lb-cell c1">13.3%</span></div>
+        <div><span class="lb-cell c2 na">N/A</span></div>
+        <div><span class="lb-cell c3">16.3%</span></div>
+        <div><span class="lb-cell c4 na">N/A</span></div>
+        <div class="lb-avg">14.8%</div>
+      </div>
+      <div class="lb-row">
+        <div class="lb-rank">06</div>
+        <div class="lb-model"><span class="lb-logo lg-qwen"><img class="lb-logo-img" src="images/logo-qwen.png" alt="Qwen"></span>Qwen3.6-27B <span class="lb-tag open">open</span></div>
+        <div><span class="lb-cell c1">4.7%</span></div>
+        <div><span class="lb-cell c2">16.8%</span></div>
+        <div><span class="lb-cell c3">4.9%</span></div>
+        <div><span class="lb-cell c4">26.2%</span></div>
+        <div class="lb-avg">13.2%</div>
+      </div>
+      <div class="lb-row">
+        <div class="lb-rank">07</div>
+        <div class="lb-model"><span class="lb-logo lg-glm"><img class="lb-logo-img" src="images/logo-zhipu.png" alt="GLM"></span>GLM-4.6V <span class="lb-tag open">open</span></div>
+        <div><span class="lb-cell c1">2.9%</span></div>
+        <div><span class="lb-cell c2">11.4%</span></div>
+        <div><span class="lb-cell c3">6.6%</span></div>
+        <div><span class="lb-cell c4">23.9%</span></div>
+        <div class="lb-avg">11.2%</div>
+      </div>
+      <div class="lb-row">
+        <div class="lb-rank">08</div>
+        <div class="lb-model"><span class="lb-logo lg-doubao"><img class="lb-logo-img" src="images/logo-doubao.png" alt="Doubao"></span>Doubao-2.0 <span class="lb-tag closed">closed</span></div>
+        <div><span class="lb-cell c1">8.0%</span></div>
+        <div><span class="lb-cell c2">8.6%</span></div>
+        <div><span class="lb-cell c3">12.5%</span></div>
+        <div><span class="lb-cell c4">15.1%</span></div>
+        <div class="lb-avg">11.1%</div>
+      </div>
+      <div class="lb-row">
+        <div class="lb-rank">09</div>
+        <div class="lb-model"><span class="lb-logo lg-doubao"><img class="lb-logo-img" src="images/logo-doubao.png" alt="Doubao"></span>Doubao-1.8 <span class="lb-tag closed">closed</span></div>
+        <div><span class="lb-cell c1">7.2%</span></div>
+        <div><span class="lb-cell c2">10.6%</span></div>
+        <div><span class="lb-cell c3">8.4%</span></div>
+        <div><span class="lb-cell c4">17.2%</span></div>
+        <div class="lb-avg">10.9%</div>
+      </div>
+      <div class="lb-row">
+        <div class="lb-rank">10</div>
+        <div class="lb-model"><span class="lb-logo lg-gemma"><img class="lb-logo-img" src="images/gemma-color.png" alt="Gemma"></span>Gemma4-31B <span class="lb-tag open">open</span></div>
+        <div><span class="lb-cell c1">2.8%</span></div>
+        <div><span class="lb-cell c2">8.2%</span></div>
+        <div><span class="lb-cell c3">6.2%</span></div>
+        <div><span class="lb-cell c4">19.6%</span></div>
+        <div class="lb-avg">9.2%</div>
+      </div>
+    </div>
+
+    <!-- Mobile leaderboard -->
+    <div class="leaderboard-mobile">
+      <div class="lb-card leader">
+        <div class="lb-card-top">
+          <div class="lc-left">
+            <div class="lc-rank">1</div>
+            <span class="lb-logo lb-logo-sm lg-gemini"><img class="lb-logo-img" src="images/logo-gemini.jpg" alt="Gemini"></span><div class="lc-name">Gemini-3.1-Pro</div>
+          </div>
+          <div class="lc-avg">33.4%</div>
+        </div>
+        <div class="lb-card-tag-row"><span class="lb-tag closed">closed</span></div>
+        <div class="lb-card-grid">
+          <div class="lb-card-cell c1m"><div class="lcc-label">C1</div><div class="lcc-val">18.4%</div></div>
+          <div class="lb-card-cell c2m"><div class="lcc-label">C2</div><div class="lcc-val">42.4%</div></div>
+          <div class="lb-card-cell c3m"><div class="lcc-label">C3</div><div class="lcc-val">21.0%</div></div>
+          <div class="lb-card-cell c4m"><div class="lcc-label">C4</div><div class="lcc-val">51.7%</div></div>
+        </div>
+      </div>
+      <div class="lb-card">
+        <div class="lb-card-top">
+          <div class="lc-left"><div class="lc-rank">2</div><span class="lb-logo lb-logo-sm lg-gemini"><img class="lb-logo-img" src="images/logo-gemini.jpg" alt="Gemini"></span><div class="lc-name">Gemini-2.5-Pro</div></div>
+          <div class="lc-avg">25.3%</div>
+        </div>
+        <div class="lb-card-tag-row"><span class="lb-tag closed">closed</span></div>
+        <div class="lb-card-grid">
+          <div class="lb-card-cell c1m"><div class="lcc-label">C1</div><div class="lcc-val">14.6%</div></div>
+          <div class="lb-card-cell c2m"><div class="lcc-label">C2</div><div class="lcc-val">29.1%</div></div>
+          <div class="lb-card-cell c3m"><div class="lcc-label">C3</div><div class="lcc-val">18.6%</div></div>
+          <div class="lb-card-cell c4m"><div class="lcc-label">C4</div><div class="lcc-val">39.0%</div></div>
+        </div>
+      </div>
+      <div class="lb-card">
+        <div class="lb-card-top">
+          <div class="lc-left"><div class="lc-rank">3</div><span class="lb-logo lb-logo-sm lg-gpt"><img class="lb-logo-img" src="images/logo-gpt.png" alt="GPT"></span><div class="lc-name">GPT-5.4</div></div>
+          <div class="lc-avg">18.5%</div>
+        </div>
+        <div class="lb-card-tag-row"><span class="lb-tag closed">closed</span></div>
+        <div class="lb-card-grid">
+          <div class="lb-card-cell c1m"><div class="lcc-label">C1</div><div class="lcc-val">8.5%</div></div>
+          <div class="lb-card-cell c2m"><div class="lcc-label">C2</div><div class="lcc-val">17.9%</div></div>
+          <div class="lb-card-cell c3m"><div class="lcc-label">C3</div><div class="lcc-val">14.5%</div></div>
+          <div class="lb-card-cell c4m"><div class="lcc-label">C4</div><div class="lcc-val">32.9%</div></div>
+        </div>
+      </div>
+      <div class="lb-card">
+        <div class="lb-card-top">
+          <div class="lc-left"><div class="lc-rank">4</div><span class="lb-logo lb-logo-sm lg-grok"><img class="lb-logo-img" src="images/logo-grok.png" alt="Grok"></span><div class="lc-name">Grok-4.20</div></div>
+          <div class="lc-avg">18.2%</div>
+        </div>
+        <div class="lb-card-tag-row"><span class="lb-tag closed">closed</span></div>
+        <div class="lb-card-grid">
+          <div class="lb-card-cell c1m"><div class="lcc-label">C1</div><div class="lcc-val">4.4%</div></div>
+          <div class="lb-card-cell c2m"><div class="lcc-label">C2</div><div class="lcc-val">22.3%</div></div>
+          <div class="lb-card-cell c3m"><div class="lcc-label">C3</div><div class="lcc-val">7.3%</div></div>
+          <div class="lb-card-cell c4m"><div class="lcc-label">C4</div><div class="lcc-val">38.8%</div></div>
+        </div>
+      </div>
+      <div class="lb-card">
+        <div class="lb-card-top">
+          <div class="lc-left"><div class="lc-rank">5</div><span class="lb-logo lb-logo-sm lg-claude"><img class="lb-logo-img" src="images/logo-claude.png" alt="Claude"></span><div class="lc-name">Claude Opus 4.7</div></div>
+          <div class="lc-avg">14.8%</div>
+        </div>
+        <div class="lb-card-tag-row"><span class="lb-tag closed">closed</span></div>
+        <div class="lb-card-grid">
+          <div class="lb-card-cell c1m"><div class="lcc-label">C1</div><div class="lcc-val">13.3%</div></div>
+          <div class="lb-card-cell c2m"><div class="lcc-label">C2</div><div class="lcc-val" style="color:var(--outline);">—</div></div>
+          <div class="lb-card-cell c3m"><div class="lcc-label">C3</div><div class="lcc-val">16.3%</div></div>
+          <div class="lb-card-cell c4m"><div class="lcc-label">C4</div><div class="lcc-val" style="color:var(--outline);">—</div></div>
+        </div>
+      </div>
+      <div class="lb-card">
+        <div class="lb-card-top">
+          <div class="lc-left"><div class="lc-rank">6</div><span class="lb-logo lb-logo-sm lg-qwen"><img class="lb-logo-img" src="images/logo-qwen.png" alt="Qwen"></span><div class="lc-name">Qwen3.6-27B</div></div>
+          <div class="lc-avg">13.2%</div>
+        </div>
+        <div class="lb-card-tag-row"><span class="lb-tag open">open</span></div>
+        <div class="lb-card-grid">
+          <div class="lb-card-cell c1m"><div class="lcc-label">C1</div><div class="lcc-val">4.7%</div></div>
+          <div class="lb-card-cell c2m"><div class="lcc-label">C2</div><div class="lcc-val">16.8%</div></div>
+          <div class="lb-card-cell c3m"><div class="lcc-label">C3</div><div class="lcc-val">4.9%</div></div>
+          <div class="lb-card-cell c4m"><div class="lcc-label">C4</div><div class="lcc-val">26.2%</div></div>
+        </div>
+      </div>
+      <div class="lb-card">
+        <div class="lb-card-top">
+          <div class="lc-left"><div class="lc-rank">7</div><span class="lb-logo lb-logo-sm lg-glm"><img class="lb-logo-img" src="images/logo-zhipu.png" alt="GLM"></span><div class="lc-name">GLM-4.6V</div></div>
+          <div class="lc-avg">11.2%</div>
+        </div>
+        <div class="lb-card-tag-row"><span class="lb-tag open">open</span></div>
+        <div class="lb-card-grid">
+          <div class="lb-card-cell c1m"><div class="lcc-label">C1</div><div class="lcc-val">2.9%</div></div>
+          <div class="lb-card-cell c2m"><div class="lcc-label">C2</div><div class="lcc-val">11.4%</div></div>
+          <div class="lb-card-cell c3m"><div class="lcc-label">C3</div><div class="lcc-val">6.6%</div></div>
+          <div class="lb-card-cell c4m"><div class="lcc-label">C4</div><div class="lcc-val">23.9%</div></div>
+        </div>
+      </div>
+      <div class="lb-card">
+        <div class="lb-card-top">
+          <div class="lc-left"><div class="lc-rank">8</div><span class="lb-logo lb-logo-sm lg-doubao"><img class="lb-logo-img" src="images/logo-doubao.png" alt="Doubao"></span><div class="lc-name">Doubao-2.0</div></div>
+          <div class="lc-avg">11.1%</div>
+        </div>
+        <div class="lb-card-tag-row"><span class="lb-tag closed">closed</span></div>
+        <div class="lb-card-grid">
+          <div class="lb-card-cell c1m"><div class="lcc-label">C1</div><div class="lcc-val">8.0%</div></div>
+          <div class="lb-card-cell c2m"><div class="lcc-label">C2</div><div class="lcc-val">8.6%</div></div>
+          <div class="lb-card-cell c3m"><div class="lcc-label">C3</div><div class="lcc-val">12.5%</div></div>
+          <div class="lb-card-cell c4m"><div class="lcc-label">C4</div><div class="lcc-val">15.1%</div></div>
+        </div>
+      </div>
+      <div class="lb-card">
+        <div class="lb-card-top">
+          <div class="lc-left"><div class="lc-rank">9</div><span class="lb-logo lb-logo-sm lg-doubao"><img class="lb-logo-img" src="images/logo-doubao.png" alt="Doubao"></span><div class="lc-name">Doubao-1.8</div></div>
+          <div class="lc-avg">10.9%</div>
+        </div>
+        <div class="lb-card-tag-row"><span class="lb-tag closed">closed</span></div>
+        <div class="lb-card-grid">
+          <div class="lb-card-cell c1m"><div class="lcc-label">C1</div><div class="lcc-val">7.2%</div></div>
+          <div class="lb-card-cell c2m"><div class="lcc-label">C2</div><div class="lcc-val">10.6%</div></div>
+          <div class="lb-card-cell c3m"><div class="lcc-label">C3</div><div class="lcc-val">8.4%</div></div>
+          <div class="lb-card-cell c4m"><div class="lcc-label">C4</div><div class="lcc-val">17.2%</div></div>
+        </div>
+      </div>
+      <div class="lb-card">
+        <div class="lb-card-top">
+          <div class="lc-left"><div class="lc-rank">10</div><span class="lb-logo lb-logo-sm lg-gemma"><img class="lb-logo-img" src="images/gemma-color.png" alt="Gemma"></span><div class="lc-name">Gemma4-31B</div></div>
+          <div class="lc-avg">9.2%</div>
+        </div>
+        <div class="lb-card-tag-row"><span class="lb-tag open">open</span></div>
+        <div class="lb-card-grid">
+          <div class="lb-card-cell c1m"><div class="lcc-label">C1</div><div class="lcc-val">2.8%</div></div>
+          <div class="lb-card-cell c2m"><div class="lcc-label">C2</div><div class="lcc-val">8.2%</div></div>
+          <div class="lb-card-cell c3m"><div class="lcc-label">C3</div><div class="lcc-val">6.2%</div></div>
+          <div class="lb-card-cell c4m"><div class="lcc-label">C4</div><div class="lcc-val">19.6%</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gain-card">
+      <h3>Search amplifies cropping — synergy ratio <span class="gain-emphasis">3.49×</span></h3>
+      <p class="gc-sub">Average gain across 9 models · ∆V = cropping gain · ∆S = search gain</p>
+
+      <div class="gain-row">
+        <div class="gain-label">∆V<sub>no search</sub><span class="ll">Cropping alone</span></div>
+        <div class="gain-bar-track"><div class="gain-bar-fill b3" style="width: 9.3%;">+3.2</div></div>
+        <div class="gain-num">+3.2 pp</div>
+      </div>
+      <div class="gain-row">
+        <div class="gain-label">∆S<sub>orig</sub><span class="ll">Search alone</span></div>
+        <div class="gain-bar-track"><div class="gain-bar-fill b1" style="width: 30.9%;">+10.6</div></div>
+        <div class="gain-num">+10.6 pp</div>
+      </div>
+      <div class="gain-row">
+        <div class="gain-label">∆V<sub>with search</sub><span class="ll">Cropping when searching</span></div>
+        <div class="gain-bar-track"><div class="gain-bar-fill b4" style="width: 31.5%;">+10.8</div></div>
+        <div class="gain-num">+10.8 pp</div>
+      </div>
+      <div class="gain-row">
+        <div class="gain-label">∆S<sub>crop</sub><span class="ll">Search when cropped</span></div>
+        <div class="gain-bar-track"><div class="gain-bar-fill b2" style="width: 53.3%;">+18.3</div></div>
+        <div class="gain-num">+18.3 pp</div>
+      </div>
+      <div class="gain-row divider">
+        <div class="gain-label"><strong>∆Total</strong><span class="ll">C1 → C4 · full lift</span></div>
+        <div class="gain-bar-track"><div class="gain-bar-fill b5" style="width: 62.4%;">+21.4</div></div>
+        <div class="gain-num">+21.4 pp</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+  ANALYSIS
+============================================================ -->
+<section class="content" id="analysis">
+  <div class="section-head">
+    <div class="section-tag"><span class="num">04</span><span>Failure modes</span></div>
+    <h2 class="section-title">Models fail — but they fail in <span class="gradient">different ways.</span></h2>
+    <p class="section-lede">
+      A 121-case audit reveals heterogeneous bottlenecks. The dominant breakage has
+      shifted upstream — into query construction and retrieval recall, not perception
+      or reasoning.
+    </p>
+  </div>
+
+  <div class="failure-grid">
+    <div class="failure-card fc-blue">
+      <div class="fc-tag">Claude</div>
+      <div class="fc-big">87%</div>
+      <h4>Knowledge bottleneck</h4>
+      <p>Search executes correctly, but the long-tail fact never surfaces. Produces a confident but slightly wrong answer.</p>
+    </div>
+    <div class="failure-card fc-red">
+      <div class="fc-tag">Qwen</div>
+      <div class="fc-big">63%</div>
+      <h4>Tool-use breakdown</h4>
+      <p>Fails to invoke the search tool at all. A fundamental gap in agentic behavior, not query formulation.</p>
+    </div>
+    <div class="failure-card fc-yellow">
+      <div class="fc-tag">All models</div>
+      <div class="fc-big">43%</div>
+      <h4>Query construction</h4>
+      <p>The most common search-stage error — queries built on misidentified entities. Only 17% are integration issues.</p>
+    </div>
+    <div class="failure-card fc-green">
+      <div class="fc-tag">Cropping</div>
+      <div class="fc-big">100%</div>
+      <h4>Crop rescue rate</h4>
+      <p>Expert cropping resolves all 18 grounding failures. 72% involve wrong attention, not just low resolution.</p>
+    </div>
+  </div>
+
+  <h3 style="font-size:22px;font-weight:600;letter-spacing:-0.02em;margin-bottom:8px;">Two real failure cases</h3>
+  <p style="font-size:14px;color:var(--on-surface-var);margin-bottom:24px;">Sourced from the paper's deep-dive analysis.</p>
+
+  <div class="case-card" id="case-nike">
+    <div class="case-head">
+      <div class="case-tag">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <span>Case 1 · Index 923-1 · Wrong attention</span>
+      </div>
+      <div class="case-tag" style="background:var(--g-blue-soft);color:var(--g-blue);">Attention re-localization</div>
+    </div>
+
+    <div class="case-question-block">
+      <div class="case-question">On the right side of the image, what brand are the sneakers the woman is wearing?</div>
+    </div>
+
+    <!-- Grounding visualization: original scene → expert crop -->
+    <div class="case-grounding">
+      <div class="case-grounding-label">
+        <span class="gl-dot"></span>
+        <span>Pixel-level grounding · what the model has to find</span>
+      </div>
+      <div class="case-grounding-grid">
+        <div class="case-grounding-pane full">
+          <div class="cgp-label">
+            <span>Original scene (C1)</span>
+            <span class="lbl-tag">High resolution · 4K+</span>
+          </div>
+          <div class="cgp-img" data-img="case-nike"></div>
+        </div>
+        <div class="case-grounding-arrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <span class="arr-label">Expert<br>crop</span>
+        </div>
+        <div class="case-grounding-pane crop">
+          <div class="cgp-label">
+            <span>Expert crop (C3)</span>
+            <span class="lbl-tag">Target region</span>
+          </div>
+          <div class="cgp-img" data-img="case-nike-crop"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="case-compare">
+      <div class="case-side wrong">
+        <div class="cs-head">
+          <div class="cs-icon">✕</div>
+          <span>Without cropping</span>
+        </div>
+        <div class="cs-body">
+          Model attends to a visually similar but wrong object: "She is wearing black sneakers with a distinctive white <span class="hl">'N' logo</span> on the side, identifying the brand as <span class="hl">New Balance</span>."
+        </div>
+      </div>
+      <div class="case-side right">
+        <div class="cs-head">
+          <div class="cs-icon">✓</div>
+          <span>With expert crop</span>
+        </div>
+        <div class="cs-body">
+          Attention re-localizes: "the short-haired woman is wearing black sneakers featuring a distinctive white <span class="hl">'swoosh' logo</span>."
+        </div>
+      </div>
+    </div>
+
+    <div class="case-truth-row">
+      <span class="ct-label">Ground truth</span>
+      <span class="ct-value">Nike</span>
+    </div>
+  </div>
+
+  <div class="case-card" id="case-uniqlo" style="margin-top: 24px;">
+    <div class="case-head">
+      <div class="case-tag">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 4v16M3 12h18"/></svg>
+        <span>Case 2 · Index 415-1 · Confident-but-wrong</span>
+      </div>
+      <div class="case-tag" style="background:var(--g-yellow-soft);color:#9c6e00;">Near-miss factual error</div>
+    </div>
+
+    <div class="case-question-block">
+      <div class="case-question">For the well-known clothing brand in the picture, how many stores did it have worldwide in fiscal year 2024?</div>
+    </div>
+
+    <!-- Grounding visualization: original scene → expert crop -->
+    <div class="case-grounding">
+      <div class="case-grounding-label">
+        <span class="gl-dot"></span>
+        <span>Pixel-level grounding · the logo on the storefront</span>
+      </div>
+      <div class="case-grounding-grid">
+        <div class="case-grounding-pane full">
+          <div class="cgp-label">
+            <span>Original scene (C1)</span>
+            <span class="lbl-tag">High resolution · 4K+</span>
+          </div>
+          <div class="cgp-img" data-img="case-uniqlo"></div>
+        </div>
+        <div class="case-grounding-arrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <span class="arr-label">Expert<br>crop</span>
+        </div>
+        <div class="case-grounding-pane crop">
+          <div class="cgp-label">
+            <span>Expert crop (C3)</span>
+            <span class="lbl-tag">Target region</span>
+          </div>
+          <div class="cgp-img" data-img="case-uniqlo-crop"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="case-compare">
+      <div class="case-side wrong">
+        <div class="cs-head">
+          <div class="cs-icon">✕</div>
+          <span>Claude's answer</span>
+        </div>
+        <div class="cs-body">
+          "According to Fast Retailing's annual report for FY2024, Uniqlo had <span class="hl">approximately 2,501 stores worldwide</span>, including around 800 in Japan and over 1,700 internationally."
+        </div>
+      </div>
+      <div class="case-side right">
+        <div class="cs-head">
+          <div class="cs-icon">✓</div>
+          <span>What actually happened</span>
+        </div>
+        <div class="cs-body">
+          Brand correctly identified. Evidence correctly retrieved. But the final number is fabricated as a "reasonable-sounding" approximation — the actual figure is <span class="hl">2,495</span>, a 6-store difference that breaks the question.
+        </div>
+      </div>
+    </div>
+
+    <div class="case-truth-row">
+      <span class="ct-label">Ground truth</span>
+      <span class="ct-value">2,495 stores</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+  CTA
+============================================================ -->
+<section class="cta-section" id="cta">
+  <div class="cta-content">
+    <div>
+      <div class="section-tag" style="background:rgba(255,255,255,0.1); color:rgba(255,255,255,0.85); margin-bottom: 20px;">
+        <span style="color:var(--aurora-3); font-family: var(--mono);">05</span>
+        <span>Get involved</span>
+      </div>
+      <h2>Three bottlenecks now define the <span class="gradient">next frontier.</span></h2>
+      <p>Pix2Fact shows that the cap on real-world visual assistance is no longer perception alone. Models need fine-grained grounding <em>and</em> deliberate, multi-step retrieval that survives the messy long tail of the open web.</p>
+    </div>
+    <div class="cta-actions">
+      <a class="cta-link" href="https://arxiv.org/abs/2602.00593" target="_blank" rel="noopener">
+        <div class="cl-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+        </div>
+        <div class="cl-text">
+          <div class="cl-title">Read the paper</div>
+          <div class="cl-sub">arXiv 2602.00593 · 36 pages</div>
+        </div>
+        <svg class="cl-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 17L17 7M7 7h10v10"/></svg>
+      </a>
+      <a class="cta-link" href="https://huggingface.co/datasets/pix2fact/Pix2FactBenchmark" target="_blank" rel="noopener">
+        <div class="cl-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        </div>
+        <div class="cl-text">
+          <div class="cl-title">Download the dataset</div>
+          <div class="cl-sub">1,000 images + (Q, A) pairs · on Hugging Face</div>
+        </div>
+        <svg class="cl-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+      </a>
+      <a class="cta-link" href="https://arxiv.org/abs/2602.00593" target="_blank" rel="noopener">
+        <div class="cl-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+        </div>
+        <div class="cl-text">
+          <div class="cl-title">Run the test suite</div>
+          <div class="cl-sub">Reproducible evaluation code · coming soon</div>
+        </div>
+        <svg class="cl-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+      </a>
+      <a class="cta-link" href="https://arxiv.org/abs/2602.00593" target="_blank" rel="noopener">
+        <div class="cl-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg>
+        </div>
+        <div class="cl-text">
+          <div class="cl-title">Submit a model</div>
+          <div class="cl-sub">Join the public leaderboard · coming soon</div>
+        </div>
+        <svg class="cl-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================
+  FOOTER
+============================================================ -->
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="ft-brand">
+        <img class="ft-logo" src="images/logo_pix2fact.png" alt="Pix2Fact" />
+        <span>Pix<b>2</b>Fact</span>
+      </div>
+      <p>A visual question-answering benchmark for the conjunction of fine-grained visual grounding and open-world knowledge search.</p>
+    </div>
+  </div>
+  <div class="copyright">
+    <span>© 2026 Pix2Fact Benchmark</span>
+    <span>When vision is not enough</span>
+  </div>
+</footer>
+
+<script>
+  // ===== Smooth anchor =====
+  // Measure the fixed nav's actual bottom each time (adapts to height/wrapping),
+  // and scroll to the section's HEADING rather than its padded top edge.
+  function navOffset() {
+    const nav = document.querySelector('nav');
+    const b = nav ? nav.getBoundingClientRect().bottom : 68;
+    return b + 24; // small breathing gap below the nav
+  }
+  function targetTopY(id) {
+    const el = document.querySelector(id);
+    if (!el) return null;
+    const target = el.querySelector('.section-head') || el;
+    return Math.max(0, target.getBoundingClientRect().top + window.scrollY - navOffset());
+  }
+  function scrollToHash(id) {
+    let y = targetTopY(id);
+    if (y === null) return;
+    window.scrollTo({ top: y, behavior: 'smooth' });
+    // Correct once for any late layout shift (e.g. lazy images loading in).
+    setTimeout(() => {
+      const y2 = targetTopY(id);
+      if (y2 !== null && Math.abs(window.scrollY - y2) > 8) {
+        window.scrollTo({ top: y2, behavior: 'smooth' });
+      }
+    }, 500);
+  }
+  document.querySelectorAll('nav a, a.btn').forEach(a => {
+    a.addEventListener('click', e => {
+      const id = a.getAttribute('href');
+      if (id && id.startsWith('#') && document.querySelector(id)) {
+        e.preventDefault();
+        scrollToHash(id);
+        if (history.replaceState) history.replaceState(null, '', id);
+      }
+    });
+  });
+
+  // ===== Reading progress =====
+  const progress = document.getElementById('readProgress');
+  window.addEventListener('scroll', () => {
+    const h = document.documentElement;
+    const pct = (h.scrollTop / (h.scrollHeight - h.clientHeight)) * 100;
+    progress.style.width = pct + '%';
+  }, { passive: true });
+
+  // ===== Reveal animation — FIXED: use a class toggle, no inline style fight =====
+  // Important: only fade up by a small amount, and always end up visible even if
+  // the IntersectionObserver misses (CSS fallback below in <style> block).
+  const animated = document.querySelectorAll('.problem-card, .scenario-card, .method-step, .lb-row, .lb-card, .failure-card, .takeaway, .wt-step, .case-grounding-pane, .qc-item');
+  animated.forEach(el => el.classList.add('reveal-pending'));
+
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(en => {
+        if (en.isIntersecting) {
+          en.target.classList.add('reveal-show');
+          io.unobserve(en.target);
+        }
+      });
+    }, { threshold: 0.05, rootMargin: '0px 0px -10px 0px' });
+    animated.forEach(el => io.observe(el));
+  } else {
+    animated.forEach(el => el.classList.add('reveal-show'));
+  }
+
+  // Safety net: after 3 seconds, force-show anything still pending
+  setTimeout(() => {
+    document.querySelectorAll('.reveal-pending:not(.reveal-show)').forEach(el => {
+      el.classList.add('reveal-show');
+    });
+  }, 3000);
+
+  // ===== Sample Gallery — 8 paper examples =====
+  (function() {
+    const total = 8;
+    let idx = 0;
+    const tabs = document.querySelectorAll('.sample-tab');
+    const cards = document.querySelectorAll('.sample-card');
+    const dots = document.querySelectorAll('.sample-dot');
+    const prevBtn = document.getElementById('sample-prev');
+    const nextBtn = document.getElementById('sample-next');
+    const counter = document.getElementById('sample-current');
+
+    function show(i) {
+      idx = Math.max(0, Math.min(total - 1, i));
+      tabs.forEach((t, j) => t.classList.toggle('active', j === idx));
+      cards.forEach((c, j) => c.classList.toggle('active', j === idx));
+      dots.forEach((d, j) => d.classList.toggle('active', j === idx));
+      if (counter) counter.textContent = (idx + 1);
+      if (prevBtn) prevBtn.disabled = (idx === 0);
+      if (nextBtn) nextBtn.disabled = (idx === total - 1);
+    }
+
+    tabs.forEach((t, i) => t.addEventListener('click', () => show(i)));
+    dots.forEach((d, i) => d.addEventListener('click', () => show(i)));
+    if (prevBtn) prevBtn.addEventListener('click', () => show(idx - 1));
+    if (nextBtn) nextBtn.addEventListener('click', () => show(idx + 1));
+
+    show(0);
+  })();
+</script>
+
+<!-- Reveal animation styles -->
+<style>
+  .reveal-pending {
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.55s var(--ease-emph), transform 0.55s var(--ease-emph);
+  }
+  .reveal-pending.reveal-show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  /* Safety: if JS fails completely, ensure no element stays hidden */
+  @media (prefers-reduced-motion: reduce) {
+    .reveal-pending { opacity: 1; transform: none; transition: none; }
+  }
+</style>
+
+</body>
+</html>
